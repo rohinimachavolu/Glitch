@@ -40,10 +40,11 @@ cp .env.example .env
 Open `.env` and paste your Groq key:
 
 ```
-VITE_GROQ_API_KEY=gsk_your_key_here
+GROQ_API_KEY=gsk_your_key_here
 ```
 
-`.env` is git-ignored. **Never commit it.** Each teammate uses their own key.
+`.env` is git-ignored. **Never commit it.** Each teammate uses their own key. The key is only read by the
+server-side `/api/llm` proxy, never bundled into the browser. (The older name `VITE_GROQ_API_KEY` still works.)
 
 ### 4. Run it
 
@@ -111,7 +112,7 @@ client/src/
   contexts/        App state (AppContext) with encrypted persistence
   index.css        Design system tokens (colours, fonts)
 scripts/           Model training / validation (data downloaded locally, never committed)
-server/            Minimal Express server for production
+server/            Express server for production + /api/llm Groq proxy (llmProxy.ts, also mounted in dev)
 ```
 
 **Design system:** all colours come from CSS variables in `client/src/index.css`
@@ -164,14 +165,39 @@ Then open a Pull Request into `main` on GitHub. Don't push directly to `main`.
 
 ---
 
+## Deploy to Render
+
+`render.yaml` is a Render Blueprint, so Render reads it and sets everything up for you.
+
+1. Push your branch to GitHub. `render.yaml` deploys the `rohini` branch; change `branch:` if you use another.
+2. Go to https://dashboard.render.com, sign in with GitHub, then **New → Blueprint**.
+3. Pick the `Glitch` repo and click **Connect**. If it isn't listed, choose *Configure account* and give Render access to the repo.
+4. When asked for `GROQ_API_KEY`, paste your Groq key. Click **Apply**.
+5. Wait for the first build (about 3–5 minutes). Your app is live at `https://glitch-xxxx.onrender.com`.
+6. Check `https://<your-app>.onrender.com/api/health`. It should return `{"ok":true,"llm":true}`.
+
+Every push to the branch redeploys automatically.
+
+**How the AI stays up**
+- The Groq key lives only on the server. The browser calls `/api/llm/chat` and `/api/llm/vision`.
+- On a rate limit, the proxy tries the fallback model, then any extra keys in `GROQ_API_KEYS`, then waits once if Groq asks for a short pause.
+- If Groq is still unavailable, the app keeps working without AI. Plans, food analysis and coaching use built-in defaults, and the voice coach still logs hot flashes, night sweats, blood pressure and mood.
+- Each visitor IP is limited to `LLM_RATE_LIMIT_PER_MIN` AI requests per minute (default 40), so one user can't use up the quota.
+
+**Free plan notes:** the service sleeps after 15 minutes without traffic, so the first visit after that takes
+about a minute. App data lives in each visitor's browser, so nothing is lost on restarts. Open the app once
+before a demo to wake it up.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
 |---|---|
 | `pnpm: command not found` | Run `corepack enable`, or prefix commands with `npx pnpm@10` |
 | `npm ERR! EACCES` on install | Your npm cache has root-owned files. Run `sudo chown -R $(whoami) ~/.npm`, or use pnpm |
-| AI replies say "using fallback" / generic text | Check `VITE_GROQ_API_KEY` in `.env`, then restart `pnpm dev` |
-| `model … does not exist` from Groq | Groq retired a model. Set `VITE_GROQ_TEXT_MODEL` / `VITE_GROQ_VISION_MODEL` in `.env` to a current model from https://console.groq.com/docs/models |
+| AI replies say "using fallback" / generic text | Check `GROQ_API_KEY` in `.env` (or on Render), then restart. http://localhost:3000/api/health shows `"llm":true` when a key is set |
+| `model … does not exist` from Groq | Groq retired a model. Set `GROQ_TEXT_MODEL` / `GROQ_FALLBACK_MODEL` / `GROQ_VISION_MODEL` in `.env` (or on Render) to a current model from https://console.groq.com/docs/models |
 | Camera or mic doesn't work | Use Chrome/Edge on **localhost** (browsers block camera/mic on plain `http://` LAN addresses). Allow permissions in the address bar |
 | Voice input button does nothing | Speech recognition needs Chrome, Edge or Safari (not Firefox) |
 | Stuck on old data / weird state | Open http://localhost:3000/?reset |

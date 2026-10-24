@@ -1,35 +1,16 @@
 /**
- * NutriSense AI — Groq AI Service Layer
- * Text tasks: openai/gpt-oss-120b (JSON-capable)
- * Vision tasks: qwen/qwen3.8-27b (food photo analysis)
- * Override with VITE_GROQ_TEXT_MODEL / VITE_GROQ_VISION_MODEL when Groq retires a model.
- * Base URL: https://api.groq.com/openai/v1
+ * NutriSense AI — AI service layer
+ * All model calls go through the app's own /api/llm proxy (server/llmProxy.ts), which holds the Groq
+ * key, picks models and handles rate limits. Every function here also has a local fallback, so the
+ * app keeps working when the proxy reports that Groq is busy or unreachable.
  */
-
-const GROQ_BASE = "https://api.groq.com/openai/v1";
-const GROQ_KEY  = import.meta.env.VITE_GROQ_API_KEY as string;
-const TEXT_MODEL   = (import.meta.env.VITE_GROQ_TEXT_MODEL as string) || "openai/gpt-oss-120b";
-// Separate per-model quota on Groq, used when the main model is rate-limited
-const FALLBACK_TEXT_MODEL = (import.meta.env.VITE_GROQ_FALLBACK_MODEL as string) || "openai/gpt-oss-20b";
-const VISION_MODEL = (import.meta.env.VITE_GROQ_VISION_MODEL as string) || "qwen/qwen3.8-27b";
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/** Seconds Groq asks us to wait on a 429 (header or "try again in 4.2s" in the body). */
-function retryAfterSeconds(res: Response, body: string): number {
-  const h = Number(res.headers.get("retry-after"));
-  if (Number.isFinite(h) && h > 0) return h;
-  const m = body.match(/try again in ([0-9.]+)s/i);
-  return m ? Number(m[1]) : 10;
-}
+import { offlineCoachReply } from "./coachAgent";
 
 // ── Generic text chat (JSON output) ──────────────────────────
-// The free Groq tier allows ~8k tokens/minute per model, so: small token budgets, low reasoning effort,
-// a short wait-and-retry on 429, then the fallback model (which has its own quota).
 interface ChatOpts {
   /** Background jobs start on the fallback model so the main model's quota stays free for live chat */
   background?: boolean;
-  /** Live chat: if every model is busy, wait out Groq's suggested delay (≤20 s) once more instead of failing */
+  /** Live chat: if every model is busy, the server waits out Groq's suggested delay once more */
   patient?: boolean;
 }
 
@@ -39,34 +20,11 @@ async function chat(
   maxTokens = 1200,
   opts: ChatOpts = {}
 ): Promise<string> {
-  const primary = opts.background ? FALLBACK_TEXT_MODEL : TEXT_MODEL;
-  const secondary = opts.background ? TEXT_MODEL : FALLBACK_TEXT_MODEL;
-  const call = (model: string) => fetch(`${GROQ_BASE}/chat/completions`, {
+  const res = await fetch("/api/llm/chat", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.3,
-      max_tokens: maxTokens,
-      ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
-      ...(json ? { response_format: { type: "json_object" } } : {}),
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, json, maxTokens, ...opts }),
   });
-
-  let res = await call(primary);
-  if (res.status === 429) {
-    const wait = retryAfterSeconds(res, await res.text());
-    if (wait <= 6) { await sleep(wait * 1000 + 250); res = await call(primary); }
-    if (res.status === 429) res = await call(secondary);
-    if (res.status === 429 && opts.patient) {
-      await sleep(Math.min(20, retryAfterSeconds(res, await res.text())) * 1000 + 300);
-      res = await call(primary);
-    }
-  }
   if (!res.ok) {
     const err = await res.text();
     // JSON mode sometimes rejects a reply the model wrote as plain text (e.g. a follow-up question).
@@ -77,10 +35,10 @@ async function chat(
         if (e?.code === "json_validate_failed" && typeof e.failed_generation === "string" && e.failed_generation.trim()) return e.failed_generation;
       } catch { /* not JSON */ }
     }
-    throw new Error(`Groq API error ${res.status}: ${err}`);
+    throw new Error(`AI proxy error ${res.status}: ${err}`);
   }
   const data = await res.json();
-  return data.choices[0].message.content as string;
+  return data.content as string;
 }
 
 // ── Vision chat (food photo analysis) ────────────────────────
@@ -88,33 +46,17 @@ async function visionChat(
   imageBase64DataUrl: string,
   textPrompt: string
 ): Promise<string> {
-  const res = await fetch(`${GROQ_BASE}/chat/completions`, {
+  const res = await fetch("/api/llm/vision", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_KEY}`,
-    },
-    body: JSON.stringify({
-      model: VISION_MODEL,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image_url", image_url: { url: imageBase64DataUrl } },
-            { type: "text", text: textPrompt },
-          ],
-        },
-      ],
-      temperature: 0.2,
-      max_tokens: 2000,
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: imageBase64DataUrl, prompt: textPrompt }),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Groq Vision API error ${res.status}: ${err}`);
+    throw new Error(`AI vision proxy error ${res.status}: ${err}`);
   }
   const data = await res.json();
-  return data.choices[0].message.content as string;
+  return data.content as string;
 }
 
 // ── Safe JSON parse helper ────────────────────────────────────
@@ -431,5 +373,12 @@ Return ONLY the message text.`;
 // Conversational coach — multi-turn, JSON (see lib/coachAgent.ts)
 // ─────────────────────────────────────────────────────────────
 export async function coachCompletion(messages: { role: "system" | "user" | "assistant"; content: string }[]): Promise<string> {
-  return chat(messages, true, 700, { patient: true });
+  try {
+    return await chat(messages, true, 700, { patient: true });
+  } catch (error) {
+    // Offline failsafe: still log hot flashes / BP / mood from the user's words, in the same JSON shape
+    console.warn("Coach model unavailable, using offline reply:", error);
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    return offlineCoachReply(lastUser?.content ?? "");
+  }
 }

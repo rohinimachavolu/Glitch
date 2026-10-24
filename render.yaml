@@ -1,0 +1,28 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Dashboard → New → Blueprint → pick this repo. Render reads this file and creates the service.
+services:
+  - type: web
+    name: glitch
+    runtime: node
+    plan: free
+    # Deploy from this branch (change to main if you merge there)
+    branch: rohini
+    autoDeploy: true
+    # NODE_ENV is set in the start script, not here: setting it for the build would skip devDependencies
+    buildCommand: npx --yes pnpm@10.4.1 install --frozen-lockfile && npx --yes pnpm@10.4.1 build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Your Groq key. Render asks for it when you create the Blueprint; it stays server-side.
+      - key: GROQ_API_KEY
+        sync: false
+      # Requests per visitor IP per minute to the AI proxy (protects the shared Groq quota)
+      - key: LLM_RATE_LIMIT_PER_MIN
+        value: "40"
+      # Optional, add in the dashboard if needed:
+      #   GROQ_API_KEYS        comma-separated extra keys, rotated when one is rate-limited
+      #   GROQ_TEXT_MODEL      default openai/gpt-oss-120b
+      #   GROQ_FALLBACK_MODEL  default openai/gpt-oss-20b
+      #   GROQ_VISION_MODEL    default qwen/qwen3.8-27b

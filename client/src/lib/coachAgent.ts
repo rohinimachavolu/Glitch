@@ -166,3 +166,39 @@ export function enforceBpSafety(reply: string, actions: CoachAction[], categoriz
   if ((cat === "stage1" || cat === "stage2") && reassuring) return `I've logged ${bp.systolic}/${bp.diastolic}. By heart-health guidelines that's in the high (${cat === "stage1" ? "stage 1" : "stage 2"}) range. One reading isn't a diagnosis, but if it keeps showing up above 130/80, it's worth a check with your doctor. Heart risk rises after menopause, so this is a good thing to track.`;
   return reply;
 }
+
+/**
+ * Offline failsafe used when the model is unreachable or rate-limited.
+ * Recognises the voice-first logging phrases (hot flash, night sweat, blood pressure, mood) so the
+ * core tracking still works, and returns the same JSON shape the model would.
+ */
+export function offlineCoachReply(text: string): string {
+  const t = text.toLowerCase();
+  const actions: Record<string, unknown>[] = [];
+  const said: string[] = [];
+
+  const bp = t.match(/\b(\d{2,3})\s*(?:\/|over)\s*(\d{2,3})\b/);
+  if (bp) {
+    const systolic = Number(bp[1]), diastolic = Number(bp[2]);
+    if (systolic >= 70 && systolic <= 250 && diastolic >= 40 && diastolic <= 150 && systolic > diastolic) {
+      actions.push({ type: "log_bp", systolic, diastolic });
+      said.push(`logged your blood pressure (${systolic}/${diastolic})`);
+    }
+  }
+
+  const night = /night sweat/.test(t);
+  if (night || /hot fl(a|u)sh/.test(t)) {
+    const intensity = /(severe|really bad|terrible|awful|intense)/.test(t) ? 3 : /(mild|small|little|slight)/.test(t) ? 1 : 2;
+    actions.push({ type: "log_hot_flash", intensity, night, count: 1 });
+    said.push(night ? "logged a night sweat" : "logged that hot flash");
+  }
+
+  const mood = /(awful|terrible|miserable|depressed)/.test(t) ? 1 : /(sad|down|stressed|anxious|tired|exhausted)/.test(t) ? 2
+    : /(great|amazing|fantastic|wonderful)/.test(t) ? 5 : /(good|happy|fine|better)/.test(t) ? 4 : null;
+  if (mood !== null && /\b(i'?m|i am|feel|feeling)\b/.test(t)) actions.push({ type: "log_mood", mood });
+
+  const reply = said.length
+    ? `Got it, I ${said.join(" and ")}.${actions.some((a) => a.type === "log_hot_flash") ? " Try some cool water and a few slow breaths." : ""} My full coaching brain is taking a short break, so I'll keep it simple for a minute.`
+    : "My coaching brain is busy right now, so give me a minute. You can still log hot flashes, night sweats, blood pressure or your mood and I'll save them.";
+  return JSON.stringify({ reply, actions, sources: [] });
+}

@@ -46,22 +46,28 @@ describe("AI service fallbacks", () => {
   });
 });
 
-describe("Groq rate-limit handling", () => {
-  it("retries after a short 429 wait, then falls back to the second model", async () => {
+describe("AI proxy", () => {
+  it("sends chat requests to the server proxy, never to Groq with a key", async () => {
     const { coachCompletion } = await import("./aiService");
-    const models: string[] = [];
-    const fetchMock = vi.fn(async (_url: string, init: { body: string }) => {
-      const model = JSON.parse(init.body).model as string;
-      models.push(model);
-      if (models.length <= 2) return new Response('{"error":{"message":"Rate limit. Please try again in 0.01s"}}', { status: 429 });
-      return new Response(JSON.stringify({ choices: [{ message: { content: '{"reply":"hi","actions":[]}' } }] }), { status: 200 });
-    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ content: '{"reply":"hi","actions":[]}' }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
-    const out = await coachCompletion([{ role: "user", content: "hello" }]);
-    expect(out).toContain('"reply":"hi"');
-    expect(models[0]).toBe(models[1]);                 // retried the same model once
-    expect(models[2]).not.toBe(models[0]);             // then the fallback model
-    expect(JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body).reasoning_effort).toBe("low");
+    expect(await coachCompletion([{ role: "user", content: "hello" }])).toContain('"reply":"hi"');
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, { headers: Record<string, string>; body: string }];
+    expect(url).toBe("/api/llm/chat");
+    expect(init.headers.Authorization).toBeUndefined();
+    expect(JSON.parse(init.body).patient).toBe(true);
+  });
+
+  it("falls back to an offline coach reply that still logs a hot flash and BP", async () => {
+    const { coachCompletion } = await import("./aiService");
+    const { parseCoachResponse } = await import("./coachAgent");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"error":{"code":"rate_limited"}}', { status: 503 })));
+    const res = parseCoachResponse(await coachCompletion([{ role: "user", content: "Severe hot flash, and my blood pressure is 132 over 84" }]));
+    expect(res.actions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "log_hot_flash", intensity: 3 }),
+      expect.objectContaining({ type: "log_bp", systolic: 132, diastolic: 84 }),
+    ]));
+    expect(res.reply.length).toBeGreaterThan(0);
   });
 });
 

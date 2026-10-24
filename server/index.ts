@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { configFromEnv, createLlmProxy } from "./llmProxy";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +16,10 @@ async function startServer() {
     process.env.NODE_ENV === "production"
       ? path.resolve(__dirname, "public")
       : path.resolve(__dirname, "..", "dist", "public");
+
+  const llm = configFromEnv();
+  if (!llm.keys.length) console.warn("GROQ_API_KEY is not set: AI features will use local fallbacks");
+  app.use(createLlmProxy(llm));
 
   app.use(express.static(staticPath));
 

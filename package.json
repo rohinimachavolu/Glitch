@@ -10,7 +10,7 @@
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
-    "test": "vitest run",
+    "test": "vitest run --root .",
     "train:hotflash": "python3 scripts/train_hotflash_model.py",
     "validate:ovulation": "tsx scripts/validate_ovulation_mcphases.ts"
   },
