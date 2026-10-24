@@ -15,12 +15,13 @@ import { useHealthInsights } from "@/hooks/useHealthInsights";
 import { useFaceEmotion } from "@/hooks/useFaceEmotion";
 import { useVoice } from "@/hooks/useVoice";
 import { fuseMood, LABEL_EMOJI, LABEL_CENTROID, type MoodLabel, type MoodRead } from "@/lib/emotion";
-import { buildSystemPrompt, parseCoachResponse } from "@/lib/coachAgent";
+import { buildSystemPrompt, parseCoachResponse, enforceBpSafety } from "@/lib/coachAgent";
 import { coachCompletion } from "@/lib/aiService";
 import { LIFE_STAGES } from "@/lib/lifeStage";
 import { useMenopauseInsights } from "@/hooks/useMenopauseInsights";
 import { useNudges } from "@/hooks/useNudges";
 import { hormoneSummary } from "@/lib/hormones";
+import { bpCategory, BP_LABEL } from "@/lib/menopauseSignals";
 import NudgeStrip from "./NudgeStrip";
 
 const INK = "oklch(0.25 0.025 50)";
@@ -52,9 +53,9 @@ export function CoachFab({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed }: { open: boolean; onClose: () => void; initialPrompt?: string | null; onPromptUsed?: () => void }) {
+export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, autoListen }: { open: boolean; onClose: () => void; initialPrompt?: string | null; onPromptUsed?: () => void; autoListen?: boolean }) {
   const app = useApp();
-  const { profile, nutritionGoals, meals, chatMessages, addChatMessage, updateChatMessage, clearChat, addMeal, removeMeal, appraisalLog, supplements } = app;
+  const { profile, nutritionGoals, meals, chatMessages, addChatMessage, updateChatMessage, clearChat, addMeal, removeMeal, appraisalLog, supplements, addHotFlash, addBp, addMood } = app;
   const h = useHealthInsights();
   const meno = useMenopauseInsights();
   const nudges = useNudges();
@@ -81,6 +82,9 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed }
   useEffect(() => {
     if (open && initialPrompt) { send(initialPrompt); onPromptUsed?.(); }
   }, [open, initialPrompt]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (open && autoListen && voice.supported && !voice.listening) { setSpeakOn(true); voice.start(); }
+  }, [open, autoListen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [chatMessages.length, thinking, voice.interim]);
   useEffect(() => { if (!open) { setCameraOn(false); voice.stop(); speechSynthesis?.cancel(); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -139,6 +143,8 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed }
 
       const logged: NonNullable<ChatMessage["loggedMeals"]> = [];
       const removed: string[] = [];
+      const chips: string[] = [];
+      let moodLogged = false;
       for (const a of res.actions) {
         if (a.type === "log_meal") {
           const meal: Meal = {
@@ -150,13 +156,29 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed }
           };
           addMeal(meal);
           logged.push({ id: meal.id, name: meal.name, calories: meal.calories, protein: meal.protein, type: meal.type });
-        } else {
+        } else if (a.type === "remove_meal") {
           const target = [...meals].reverse().find((m) => m.name.toLowerCase().includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(m.name.toLowerCase()));
           if (target) { removeMeal(target.id); removed.push(target.name); }
+        } else if (a.type === "log_hot_flash") {
+          for (let k = 0; k < a.count; k++) addHotFlash({ id: nanoid(), at: new Date().toISOString(), intensity: a.intensity as 1 | 2 | 3, night: a.night });
+          chips.push(`🔥 ${a.count > 1 ? `${a.count} hot flashes` : a.night ? "Night sweat" : "Hot flash"} logged · ${["", "mild", "moderate", "severe"][a.intensity]}`);
+        } else if (a.type === "log_bp") {
+          addBp({ at: new Date().toISOString(), systolic: a.systolic, diastolic: a.diastolic, pulse: a.pulse });
+          chips.push(`🩺 BP ${a.systolic}/${a.diastolic} · ${BP_LABEL[bpCategory(a.systolic, a.diastolic)]}`);
+        } else if (a.type === "log_mood") {
+          moodLogged = true;
+          addMood({ at: new Date().toISOString(), mood: a.mood, label: moodNow?.label, source: via });
+          chips.push(`${["", "😞", "😕", "😐", "🙂", "😄"][a.mood]} Mood noted`);
         }
       }
-      addChatMessage({ id: nanoid(), role: "assistant", text: res.reply, at: new Date().toISOString(), mood: moodNow?.label, loggedMeals: logged.length ? logged : undefined, removedMeals: removed.length ? removed : undefined });
-      speak(res.reply);
+      // Passive emotion tracking: if the user didn't state a mood, keep the sensed one (face/voice/text)
+      const sensed = fuseMood(face.read, arousal, res.moodRead ?? textRead, selfRead);
+      if (!moodLogged && sensed && sensed.label !== "neutral") {
+        addMood({ at: new Date().toISOString(), mood: Math.max(1, Math.min(5, Math.round(3 + sensed.valence * 2))), label: sensed.label, source: via });
+      }
+      const reply = enforceBpSafety(res.reply, res.actions, bpCategory);
+      addChatMessage({ id: nanoid(), role: "assistant", text: reply, at: new Date().toISOString(), mood: moodNow?.label, loggedMeals: logged.length ? logged : undefined, removedMeals: removed.length ? removed : undefined, chips: chips.length ? chips : undefined });
+      speak(reply);
     } catch (err) {
       console.warn("Coach chat failed:", err);
       addChatMessage({ id: nanoid(), role: "assistant", text: "I can't reach my brain right now (connection issue). Try again in a moment?", at: new Date().toISOString() });
@@ -319,6 +341,9 @@ function Bubble({ m, onUndo }: { m: ChatMessage; onUndo: () => void }) {
         </button>
       )}
       {m.removedMeals?.map((n) => <p key={n} style={{ fontSize: 11, color: MUTED, fontFamily: font, marginTop: 3 }}>🗑️ Removed “{n}”</p>)}
+      {m.chips?.map((c) => (
+        <div key={c} style={{ marginTop: 6, padding: "8px 11px", borderRadius: 12, background: "color-mix(in oklch, var(--accent) 10%, white)", border: "1px solid color-mix(in oklch, var(--accent) 25%, transparent)", fontSize: 12.5, fontWeight: 700, color: INK, fontFamily: font }}>{c}</div>
+      ))}
     </motion.div>
   );
 }

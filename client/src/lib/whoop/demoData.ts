@@ -238,3 +238,16 @@ export function generateDemoTriggerMeals(days: DailyPhysiology[]): { name: strin
   const rand = rng(2024);
   return days.slice(-30).filter(() => rand() < 0.22).map((d) => ({ name: "Glass of red wine", loggedAt: `${d.date}T19:45:00` }));
 }
+
+/** Demo home BP readings every ~2–3 days: drifting from normal into stage-1 range (heart risk after menopause). */
+export function generateDemoBp(today = new Date()): { at: string; systolic: number; diastolic: number }[] {
+  const rand = rng(31);
+  const out: { at: string; systolic: number; diastolic: number }[] = [];
+  for (let d = 29; d >= 0; d -= 2 + Math.floor(rand() * 2)) {
+    const drift = (29 - d) / 29;
+    const t = new Date(today.getTime() - d * DAY);
+    t.setHours(8, 10, 0, 0);
+    out.push({ at: t.toISOString(), systolic: Math.round(122 + 12 * drift + (rand() - 0.5) * 8), diastolic: Math.round(78 + 7 * drift + (rand() - 0.5) * 6) });
+  }
+  return out;
+}

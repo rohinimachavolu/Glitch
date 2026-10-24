@@ -111,6 +111,8 @@ export interface DailyPhysiology {
   /** Sleep disturbances (wake events) — useful for spotting night sweats */
   disturbances?: number | null;
   sleepEfficiency?: number | null;
+  /** Minutes awake after falling asleep (WASO proxy) */
+  awakeMinutes?: number | null;
 }
 
 const dayOf = (iso: string) => iso.slice(0, 10);
@@ -147,6 +149,7 @@ export function toDaily(data: WhoopData): DailyPhysiology[] {
     r.sleepHours = (st.total_in_bed_time_milli - st.total_awake_time_milli) / 3_600_000;
     r.disturbances = st.disturbance_count;
     r.sleepEfficiency = s.score.sleep_efficiency_percentage;
+    r.awakeMinutes = Math.round(st.total_awake_time_milli / 60_000);
   }
   for (const c of data.cycles) {
     if (c.score_state !== "SCORED" || !c.score) continue;

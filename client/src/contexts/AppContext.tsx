@@ -19,6 +19,7 @@ import type { CheckInInput, StrategyId, Mismatch } from "@/lib/appraisal";
 import type { ScreenerResult } from "@/lib/mentalHealth";
 import type { MoodLabel } from "@/lib/emotion";
 import type { HotFlash, MrsResult } from "@/lib/menopause";
+import type { BpReading, Ethnicity } from "@/lib/menopauseSignals";
 
 export interface ChatMessage {
   id: string;
@@ -31,6 +32,8 @@ export interface ChatMessage {
   /** Meals this assistant turn logged (shown as cards with Undo) */
   loggedMeals?: { id: string; name: string; calories: number; protein: number; type: Meal["type"] }[];
   removedMeals?: string[];
+  /** Other things this turn logged (hot flashes, BP, mood) */
+  chips?: string[];
   undone?: boolean;
 }
 
@@ -84,7 +87,11 @@ export interface WomensHealthProfile {
   smoker?: boolean;
   priorMenoSymptoms?: boolean;
   labs?: { fsh?: number; estradiol?: number };
+  /** Self-identified, optional, consented. Used only for research context (SWAN), never scoring */
+  ethnicity?: Ethnicity | "prefer_not";
 }
+
+export interface MoodEntry { at: string; mood: number; label?: string; source: "voice" | "text" | "tap" }
 
 export interface UserProfile {
   name: string;
@@ -239,6 +246,8 @@ export interface AppState {
   hotFlashLog: HotFlash[];
   mrsLog: MrsResult[];
   supplementTaken: { supplementId: string; at: string }[];
+  bpLog: BpReading[];
+  moodLog: MoodEntry[];
 }
 
 interface AppContextType extends AppState {
@@ -279,6 +288,8 @@ interface AppContextType extends AppState {
   updateWomensHealth: (patch: Partial<WomensHealthProfile>) => void;
   markSupplementTaken: (supplementId: string) => void;
   undoSupplementTaken: (supplementId: string) => void;
+  addBp: (r: BpReading) => void;
+  addMood: (m: MoodEntry) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -308,6 +319,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [hotFlashLog, setHotFlashLog] = useState<HotFlash[]>([]);
   const [mrsLog, setMrsLog] = useState<MrsResult[]>([]);
   const [supplementTaken, setSupplementTaken] = useState<{ supplementId: string; at: string }[]>([]);
+  const [bpLog, setBpLog] = useState<BpReading[]>([]);
+  const [moodLog, setMoodLog] = useState<MoodEntry[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   const fetchExercisePlan = useCallback(async (p: UserProfile) => {
@@ -496,7 +509,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    dataStore.load<Snapshot>().then((snap) => {
+    // Demo helper: open the app with ?reset to wipe all local data and start fresh
+    const reset = new URLSearchParams(window.location.search).has("reset");
+    const start = reset
+      ? dataStore.clear().then(() => {
+          try { Object.keys(localStorage).filter((k) => k.startsWith("glitch.")).forEach((k) => localStorage.removeItem(k)); } catch { /* storage unavailable */ }
+          window.history.replaceState(null, "", window.location.pathname);
+        })
+      : Promise.resolve();
+    start.then(() => dataStore.load<Snapshot>()).then((snap) => {
       if (snap?.profile) {
         setProfileState(snap.profile);
         setNutritionGoals(snap.nutritionGoals);
@@ -522,6 +543,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setMrsLog(snap.mrsLog ?? []);
         // Keep ~2 weeks of supplement history
         setSupplementTaken((snap.supplementTaken ?? []).filter((t) => Date.now() - Date.parse(t.at) < 14 * 86_400_000));
+        setBpLog(snap.bpLog ?? []);
+        setMoodLog(snap.moodLog ?? []);
         // Demo data is regenerated rather than stored — it's deterministic and large
         if (snap.whoop?.source === "demo") setWhoop(buildDemo(snap.profile));
         else if (snap.whoop) setWhoop(snap.whoop as WhoopData);
@@ -537,7 +560,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     saveTimer.current = setTimeout(() => {
       const snap: Snapshot = {
         profile, nutritionGoals, exercisePlan, weeklyWorkoutPlan, meals, steps, streak, weightLog,
-        wellnessLog, cycleSymptomLog, periodLog, supplements, completedExercises, appraisalLog, screenerLog, mealHistory, hotFlashLog, mrsLog, supplementTaken,
+        wellnessLog, cycleSymptomLog, periodLog, supplements, completedExercises, appraisalLog, screenerLog, mealHistory, hotFlashLog, mrsLog, supplementTaken, bpLog, moodLog,
         chatMessages: chatMessages.slice(-60),
         savedOn: localDay(new Date()),
         whoop: whoop?.source === "demo" ? { source: "demo" } : whoop,
@@ -545,7 +568,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dataStore.save(snap);
     }, 400);
   }, [hydrated, profile, nutritionGoals, exercisePlan, weeklyWorkoutPlan, meals, steps, streak, weightLog,
-      wellnessLog, cycleSymptomLog, periodLog, supplements, completedExercises, appraisalLog, screenerLog, chatMessages, mealHistory, hotFlashLog, mrsLog, supplementTaken, whoop]);
+      wellnessLog, cycleSymptomLog, periodLog, supplements, completedExercises, appraisalLog, screenerLog, chatMessages, mealHistory, hotFlashLog, mrsLog, supplementTaken, bpLog, moodLog, whoop]);
 
   // ── WHOOP ──────────────────────────────────────────────────
   const connectWhoopDemo = useCallback(() => {
@@ -559,9 +582,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     downloadJson(`glitch-my-data-${new Date().toISOString().slice(0, 10)}.json`, {
       exportedAt: new Date().toISOString(),
       profile, nutritionGoals, meals, weightLog, wellnessLog, cycleSymptomLog, periodLog, supplements,
-      mealHistory, weeklyWorkoutPlan, appraisalLog, screenerLog, chatMessages, hotFlashLog, mrsLog, whoop,
+      mealHistory, weeklyWorkoutPlan, appraisalLog, screenerLog, chatMessages, hotFlashLog, mrsLog, bpLog, moodLog, whoop,
     });
-  }, [profile, nutritionGoals, meals, mealHistory, weightLog, wellnessLog, cycleSymptomLog, periodLog, supplements, weeklyWorkoutPlan, appraisalLog, screenerLog, chatMessages, hotFlashLog, mrsLog, whoop]);
+  }, [profile, nutritionGoals, meals, mealHistory, weightLog, wellnessLog, cycleSymptomLog, periodLog, supplements, weeklyWorkoutPlan, appraisalLog, screenerLog, chatMessages, hotFlashLog, mrsLog, bpLog, moodLog, whoop]);
 
   // ── Appraisal check-ins ────────────────────────────────────
   const addAppraisal = useCallback((e: AppraisalEntry) => setAppraisalLog((prev) => [...prev, e]), []);
@@ -594,6 +617,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return idx < 0 ? prev : prev.filter((_, i) => i !== idx);
     });
   }, []);
+  const addBp = useCallback((r: BpReading) => setBpLog((prev) => [...prev, r]), []);
+  const addMood = useCallback((m: MoodEntry) => setMoodLog((prev) => [...prev, m].slice(-500)), []);
   const updateWomensHealth = useCallback((patch: Partial<WomensHealthProfile>) => {
     setProfileState((prev) => (prev?.womensHealth ? { ...prev, womensHealth: { ...prev.womensHealth, ...patch } } : prev));
   }, []);
@@ -608,7 +633,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       appraisalLog, addAppraisal, rateAppraisal, screenerLog, addScreener,
       chatMessages, addChatMessage, updateChatMessage, clearChat, removeMeal, mealHistory,
       hotFlashLog, addHotFlash, removeHotFlash, mrsLog, addMrs, updateWomensHealth,
-      supplementTaken, markSupplementTaken, undoSupplementTaken,
+      supplementTaken, markSupplementTaken, undoSupplementTaken, bpLog, addBp, moodLog, addMood,
       setProfile, addMeal, setSteps, toggleExercise, addWeightEntry,
       addWellnessEntry, addCycleSymptomEntry, logPeriodStart,
       addSupplement, removeSupplement, refreshExercisePlan,

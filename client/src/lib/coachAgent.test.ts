@@ -51,3 +51,22 @@ describe("buildSystemPrompt", () => {
     expect(p).toMatch(/988/);
   });
 });
+
+describe("enforceBpSafety", () => {
+  const cat = (s: number, d: number) => (s > 180 || d > 120 ? "crisis" : s >= 140 || d >= 90 ? "stage2" : s >= 130 || d >= 80 ? "stage1" : s >= 120 ? "elevated" : "normal");
+  it("corrects a reassuring reply for a stage-1 reading", async () => {
+    const { enforceBpSafety } = await import("./coachAgent");
+    const out = enforceBpSafety("Your BP is 132/84, which is in a healthy range!", [{ type: "log_bp", systolic: 132, diastolic: 84 }], cat);
+    expect(out).toMatch(/high \(stage 1\)/);
+    expect(out).not.toMatch(/healthy/);
+  });
+  it("always gives 911 guidance for a crisis reading", async () => {
+    const { enforceBpSafety } = await import("./coachAgent");
+    expect(enforceBpSafety("Logged!", [{ type: "log_bp", systolic: 190, diastolic: 115 }], cat)).toMatch(/911/);
+  });
+  it("leaves accurate replies alone", async () => {
+    const { enforceBpSafety } = await import("./coachAgent");
+    const r = "Logged 118/76, that's in the normal range.";
+    expect(enforceBpSafety(r, [{ type: "log_bp", systolic: 118, diastolic: 76 }], cat)).toBe(r);
+  });
+});

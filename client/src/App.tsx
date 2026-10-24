@@ -17,6 +17,7 @@ import Fitness from "./pages/Fitness";
 import FormCoach from "./pages/FormCoach";
 import WomensHealth from "./pages/WomensHealth";
 import Progress from "./pages/Progress";
+import MenopauseHome from "./pages/MenopauseHome";
 import CoachChat, { CoachFab } from "./components/CoachChat";
 import { ThemeSync, Confetti } from "./components/Fun";
 
@@ -25,7 +26,11 @@ function AppShell() {
   const [activeTab, setActiveTab] = useState("home");
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachPrompt, setCoachPrompt] = useState<string | null>(null);
+  const [coachListen, setCoachListen] = useState(false);
+  const [fullDashboard, setFullDashboard] = useState(false);
   const askCoach = (prompt: string) => { setCoachPrompt(prompt); setCoachOpen(true); };
+  // Voice-first: the big mic opens Glitchy already listening
+  const talk = (prompt?: string) => { if (prompt) askCoach(prompt); else { setCoachListen(true); setCoachOpen(true); } };
 
   // Wait for encrypted saved data to be restored before deciding whether to onboard
   if (!hydrated) {
@@ -42,9 +47,13 @@ function AppShell() {
 
   // Cycle tab covers life stages too (pregnancy, menopause…), so show it for all female profiles
   const isFemale = profile.biologicalSex === "female" && !!profile.womensHealth;
+  const wh = profile.womensHealth;
+  const menopauseMode = isFemale && !fullDashboard && (wh?.noCycleReason === "menopause" || wh?.noCycleReason === "perimenopause" || profile.age >= 45);
 
   const pages: Record<string, React.ReactNode> = {
-    home:     <Dashboard onAskCoach={askCoach} />,
+    home:     menopauseMode
+      ? <MenopauseHome onTalk={talk} onOpenFull={() => setFullDashboard(true)} />
+      : <Dashboard onAskCoach={askCoach} />,
     log:      <LogFood />,
     fitness:  <Fitness />,
     form:     <FormCoach />,
@@ -61,7 +70,7 @@ function AppShell() {
       <Confetti />
       <BottomNav active={activeTab} onChange={setActiveTab} isFemale={isFemale} />
       {!coachOpen && activeTab !== "form" && <CoachFab onOpen={() => setCoachOpen(true)} />}
-      <CoachChat open={coachOpen} onClose={() => setCoachOpen(false)} initialPrompt={coachPrompt} onPromptUsed={() => setCoachPrompt(null)} />
+      <CoachChat open={coachOpen} onClose={() => { setCoachOpen(false); setCoachListen(false); }} initialPrompt={coachPrompt} onPromptUsed={() => setCoachPrompt(null)} autoListen={coachListen} />
     </div>
   );
 }

@@ -218,3 +218,11 @@ button:active:not(:disabled) {
 .bottom-nav-spacer {
   height: 80px;
 }
+
+/* Doctor report: print only the report */
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; max-width: none !important; max-height: none !important; overflow: visible !important; border-radius: 0 !important; }
+  .no-print { display: none !important; }
+}

@@ -12,6 +12,7 @@ import { ChevronRight, Leaf } from "lucide-react";
 import { LIFE_STAGES, NO_CYCLE_OPTIONS, NoCycleReason } from "@/lib/lifeStage";
 import type { HormoneContext } from "@/lib/hormones";
 import HormoneConsent from "@/components/HormoneConsent";
+import QuickMenopauseSetup from "@/components/QuickMenopauseSetup";
 
 const GOALS: { id: FitnessGoal; label: string; desc: string; emoji: string }[] = [
   { id: "lose_weight",      label: "Lose Weight",     desc: "Burn fat, feel lighter",         emoji: "🔥" },
@@ -92,6 +93,7 @@ function MultiSelectGrid<T extends string>({
 export default function Onboarding({ onDone }: { onDone: () => void }) {
   const { setProfile } = useApp();
   const [step, setStep] = useState(0);
+  const [quickMeno, setQuickMeno] = useState(false);
 
   // Step 0
   const [name, setName] = useState("");
@@ -173,6 +175,8 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     ? ["Your Info", "Your Goal", "Equipment", "Workout Style", "Women's Health", "Ready!"]
     : ["Your Info", "Your Goal", "Equipment", "Workout Style", "Ready!"];
 
+  if (quickMeno) return <QuickMenopauseSetup onDone={onDone} onBack={() => setQuickMeno(false)} />;
+
   return (
     <div className="flex flex-col min-h-dvh" style={{ background: "oklch(0.97 0.015 75)", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0, backgroundImage: `url(https://d2xsxph8kpxj0f.cloudfront.net/310519663713781500/N52YZyrsSNdjSRTgTVUb76/nutrisense-onboarding-3SmdPTeErfea5KVPWPdRcD.webp)`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.14, zIndex: 0 }} />
@@ -202,6 +206,14 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         {/* ── Step 0: Personal Info + Sex ── */}
         {step === 0 && (
           <div className="flex flex-col gap-3 flex-1 animate-fade-up animate-fade-up-delay-2">
+            <button onClick={() => setQuickMeno(true)}
+              style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, border: "2px solid color-mix(in oklch, var(--accent) 35%, transparent)", background: "color-mix(in oklch, var(--accent) 8%, white)", textAlign: "left" }}>
+              <span style={{ fontSize: 28 }}>🌗</span>
+              <span>
+                <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Here for menopause support?</span>
+                <span style={{ display: "block", fontSize: 12.5, color: "oklch(0.50 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>1-minute setup, then just talk to Glitchy →</span>
+              </span>
+            </button>
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>Let's get to know you</h1>
             <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>We'll personalize your plan just for you.</p>
             {[

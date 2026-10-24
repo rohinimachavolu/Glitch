@@ -22,6 +22,9 @@ export type MealAction = z.infer<typeof MealActionSchema>;
 const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("log_meal"), meal: MealActionSchema }),
   z.object({ type: z.literal("remove_meal"), name: z.string().min(1) }),
+  z.object({ type: z.literal("log_hot_flash"), intensity: z.number().int().min(1).max(3).default(2), night: z.boolean().default(false), count: z.number().int().min(1).max(10).default(1) }),
+  z.object({ type: z.literal("log_bp"), systolic: z.number().int().min(70).max(250), diastolic: z.number().int().min(40).max(150), pulse: z.number().int().min(30).max(220).optional() }),
+  z.object({ type: z.literal("log_mood"), mood: z.number().int().min(1).max(5) }),
 ]);
 export type CoachAction = z.infer<typeof ActionSchema>;
 
@@ -100,12 +103,32 @@ MEAL LOGGING
 SUPPLEMENTS
 - Know absorption rules: keep iron and calcium (and zinc) 2+ h apart; iron on an empty stomach with vitamin C, away from coffee/tea/dairy; vitamin D/A/E/K and omega-3 with a meal containing fat; levothyroxine on an empty stomach 30–60 min before breakfast and 4 h from calcium/iron. Suggest checking with a pharmacist for medications.
 
+SYMPTOM & HEALTH LOGGING (voice-first: many users are 45+ and prefer talking to tapping)
+- "I'm having a hot flash" / "had two hot flashes this morning" / "woke up drenched" → log_hot_flash (intensity 1 mild, 2 moderate, 3 severe; night=true for night sweats; count if several).
+- "My blood pressure is 135 over 85" → log_bp. Describe it using the ACC/AHA categories EXACTLY: normal <120 and <80; elevated 120–129 and <80; high (stage 1) 130–139 or 80–89; high (stage 2) ≥140 or ≥90; very high >180 or >120. Never call a reading of 130+ systolic or 80+ diastolic "healthy" or "normal". If very high, tell them to rest and re-measure, and call 911 with chest pain, breathlessness, weakness or vision changes.
+- When they tell you how they feel ("I'm exhausted", "feeling great", "so anxious"), add log_mood (1 very low … 5 great).
+- Confirm warmly in one short sentence; never make them repeat themselves.
+
 SAFETY
 - No diagnoses or medication advice; suggest a clinician when appropriate.
 - Never encourage eating under 1200 kcal/day, purging, or compensatory exercise.
 - If they mention self-harm or wanting to die: respond with care and tell them to call or text 988 (US) or 911 in danger.
 
 Respond ONLY with JSON:
-{"reply": "...", "mood_read": {"valence": -1..1, "arousal": 0..1} or null, "actions": [{"type":"log_meal","meal":{"name":"...","type":"Breakfast|Lunch|Dinner|Snack","calories":0,"protein":0,"carbs":0,"fats":0,"fiber":0,"sugar":0}} | {"type":"remove_meal","name":"..."}]}
+{"reply": "...", "mood_read": {"valence": -1..1, "arousal": 0..1} or null, "actions": [{"type":"log_meal","meal":{"name":"...","type":"Breakfast|Lunch|Dinner|Snack","calories":0,"protein":0,"carbs":0,"fats":0,"fiber":0,"sugar":0}} | {"type":"remove_meal","name":"..."} | {"type":"log_hot_flash","intensity":2,"night":false,"count":1} | {"type":"log_bp","systolic":120,"diastolic":80} | {"type":"log_mood","mood":3}]}
 mood_read is YOUR read of their emotional tone from their words (null if neutral/unclear).`;
+}
+
+/**
+ * Safety net for BP replies: if a logged reading is high but the model's reply sounds reassuring,
+ * replace it with guideline-correct wording (ACC/AHA 2017).
+ */
+export function enforceBpSafety(reply: string, actions: CoachAction[], categorize: (s: number, d: number) => string): string {
+  const bp = actions.find((a): a is Extract<CoachAction, { type: "log_bp" }> => a.type === "log_bp");
+  if (!bp) return reply;
+  const cat = categorize(bp.systolic, bp.diastolic);
+  const reassuring = /\b(healthy|normal|great|good|fine|perfect|ideal)\b/i.test(reply) && !/\bhigh\b/i.test(reply);
+  if (cat === "crisis") return `I've logged ${bp.systolic}/${bp.diastolic}. That's very high. Please sit quietly for 5 minutes and measure again. If it's still above 180/120, or you have chest pain, shortness of breath, weakness or vision changes, call 911 now.`;
+  if ((cat === "stage1" || cat === "stage2") && reassuring) return `I've logged ${bp.systolic}/${bp.diastolic}. By heart-health guidelines that's in the high (${cat === "stage1" ? "stage 1" : "stage 2"}) range. One reading isn't a diagnosis, but if it keeps showing up above 130/80, it's worth a check with your doctor. Heart risk rises after menopause, so this is a good thing to track.`;
+  return reply;
 }
