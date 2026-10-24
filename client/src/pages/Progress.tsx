@@ -1,395 +1,87 @@
 /**
- * NutriSense AI — Progress Tab
- * Design: Organic Wellness Journal
- * All data comes from real logged meals and weight entries in AppContext.
- * Weekly chart is built from actual meal logs grouped by day.
+ * Luna — Progress
+ * Consistency-focused (never weight-shaming). Celebrates check-ins, workouts,
+ * and logged days. Reward showing up, not numbers.
  */
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
+import { motion } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  LineChart, Line,
-} from "recharts";
-import { toast } from "sonner";
-import WellnessCheckIn from "@/components/WellnessCheckIn";
-
-const CHART_TABS = ["Calories", "Protein", "Steps"];
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function NutritionScore({ meals, goals }: {
-  meals: { protein: number; fiber: number; omega3: number }[];
-  goals: { proteinTarget: number; fiberTarget: number; omega3Target: number } | null;
-}) {
-  if (!goals || meals.length === 0) return null;
-  const total = meals.length;
-  const avgProtein = meals.reduce((a, m) => a + m.protein, 0) / total;
-  const avgFiber   = meals.reduce((a, m) => a + m.fiber,   0) / total;
-  const avgOmega3  = meals.reduce((a, m) => a + m.omega3,  0) / total;
-  const score = Math.min(100, Math.round(
-    (Math.min(avgProtein / goals.proteinTarget, 1) * 40) +
-    (Math.min(avgFiber   / goals.fiberTarget,   1) * 35) +
-    (Math.min(avgOmega3  / goals.omega3Target,  1) * 25)
-  ));
-  const badge = score >= 80 ? { label: "Excellent", color: "oklch(0.72 0.08 148)" }
-              : score >= 60 ? { label: "Good",      color: "oklch(0.78 0.10 75)"  }
-              :               { label: "Needs Work", color: "oklch(0.62 0.12 38)"  };
-
-  return (
-    <div
-      style={{
-        background: "oklch(0.99 0.010 78)",
-        borderRadius: 20,
-        padding: "16px",
-        boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
-      }}
-    >
-      <p style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
-        Weekly Nutrition Score
-      </p>
-      <div className="flex items-center gap-4">
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: "50%",
-            background: `conic-gradient(${badge.color} ${score}%, oklch(0.88 0.020 72) 0%)`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <div
-            style={{
-              width: 54,
-              height: 54,
-              borderRadius: "50%",
-              background: "oklch(0.99 0.010 78)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <span style={{ fontSize: 18, fontWeight: 700, color: badge.color, fontFamily: "'DM Sans', sans-serif" }}>
-              {score}%
-            </span>
-          </div>
-        </div>
-        <div>
-          <span
-            style={{
-              display: "inline-block",
-              padding: "4px 12px",
-              borderRadius: 999,
-              background: `${badge.color}22`,
-              color: badge.color,
-              fontSize: 13,
-              fontWeight: 700,
-              fontFamily: "'DM Sans', sans-serif",
-              marginBottom: 4,
-            }}
-          >
-            {badge.label}
-          </span>
-          <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
-            Based on your logged meals today
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { Flame, CalendarCheck, Dumbbell, HeartPulse } from "lucide-react";
 
 export default function Progress() {
-  const { weightLog, addWeightEntry, meals, nutritionGoals, steps } = useApp();
-  const [chartTab, setChartTab] = useState("Calories");
-  const [newWeight, setNewWeight] = useState("");
+  const { checkins, workouts, meals, periods, hotFlashes, profile } = useApp();
 
-  // Build weekly chart data from actual logged meals
-  // Group meals by day of week (last 7 days)
-  const weeklyData = useMemo(() => {
-    const now = new Date();
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(now);
-      d.setDate(now.getDate() - (6 - i));
-      const dayLabel = DAY_LABELS[d.getDay()];
-      const isToday = i === 6;
-
-      // For today, use real meal data; for past days, show 0 (no history stored yet)
-      const dayMeals = isToday ? meals : [];
-      const calories = dayMeals.reduce((a, m) => a + m.calories, 0);
-      const protein  = dayMeals.reduce((a, m) => a + m.protein,  0);
-      const daySteps = isToday ? steps : 0;
-
-      return { day: dayLabel, calories, protein, steps: daySteps, isToday };
-    });
-  }, [meals, steps]);
-
-  const chartData = weeklyData.map((d) => ({
-    day: d.day + (d.isToday ? " ★" : ""),
-    value: chartTab === "Calories" ? d.calories
-         : chartTab === "Protein"  ? d.protein
-         : d.steps,
-  }));
-
-  const barColor = chartTab === "Calories" ? "oklch(0.62 0.12 38)"
-                 : chartTab === "Protein"  ? "oklch(0.72 0.08 148)"
-                 : "oklch(0.68 0.09 25)";
-
-  function handleAddWeight() {
-    const w = parseFloat(newWeight);
-    if (!isNaN(w) && w > 0) {
-      const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      addWeightEntry({ date: today, weight: w });
-      setNewWeight("");
-      toast.success("Weight logged! Keep it up 🌿");
+  const stats = useMemo(() => {
+    const days = new Set<string>();
+    checkins.forEach((c) => days.add(c.date));
+    workouts.forEach((w) => days.add(w.date));
+    // streak = consecutive days ending today with any activity
+    let streak = 0;
+    const d = new Date();
+    while (true) {
+      const iso = d.toISOString().split("T")[0];
+      if (days.has(iso)) { streak++; d.setDate(d.getDate() - 1); } else break;
     }
-  }
+    return {
+      streak,
+      checkinCount: checkins.length,
+      workoutCount: workouts.length,
+      periodCount: periods.length,
+      flashCount: hotFlashes.length,
+    };
+  }, [checkins, workouts, periods, hotFlashes]);
 
-  const hasAnyData = meals.length > 0 || weightLog.length > 0;
+  const cards = [
+    { icon: <Flame size={20} />, label: "Day streak", value: stats.streak, color: "oklch(0.66 0.16 35)" },
+    { icon: <CalendarCheck size={20} />, label: "Check-ins", value: stats.checkinCount, color: "oklch(0.70 0.14 160)" },
+    { icon: <Dumbbell size={20} />, label: "Workouts", value: stats.workoutCount, color: "oklch(0.66 0.13 300)" },
+    profile?.healthMode === "menopause"
+      ? { icon: <HeartPulse size={20} />, label: "Flashes logged", value: stats.flashCount, color: "oklch(0.78 0.12 85)" }
+      : { icon: <HeartPulse size={20} />, label: "Periods logged", value: stats.periodCount, color: "oklch(0.78 0.12 85)" },
+  ];
+
+  const badges = [
+    { got: stats.checkinCount >= 1, emoji: "🌱", label: "First check-in" },
+    { got: stats.streak >= 3, emoji: "🔥", label: "3-day streak" },
+    { got: stats.workoutCount >= 5, emoji: "💪", label: "5 workouts" },
+    { got: stats.checkinCount >= 10, emoji: "🌙", label: "10 check-ins" },
+    { got: stats.streak >= 7, emoji: "⭐", label: "Week strong" },
+  ];
 
   return (
-    <div className="flex flex-col gap-0 pb-2">
-      {/* Header */}
-      <div style={{ padding: "20px 20px 12px" }}>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>
-          Your Progress
-        </h1>
-        <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>
-          {hasAnyData ? "Here's how you're doing this week." : "Start logging meals to see your progress here."}
-        </p>
+    <div className="luna-app" style={{ minHeight: "100%", padding: "22px 16px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+      <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "var(--luna-text)" }}>Your progress</h1>
+      <p style={{ fontSize: 12, color: "var(--luna-text-muted)" }}>Luna celebrates consistency — showing up matters more than any number.</p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {cards.map((c, i) => (
+          <motion.div key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.06 }}
+            style={{ padding: 16, borderRadius: 18, background: "var(--luna-surface)", boxShadow: "0 4px 16px oklch(0.2 0.02 50 / 0.06)" }}>
+            <div style={{ color: c.color, marginBottom: 6 }}>{c.icon}</div>
+            <p style={{ fontSize: 26, fontWeight: 800, color: "var(--luna-text)", fontFamily: "'Playfair Display', serif" }}>{c.value}</p>
+            <p style={{ fontSize: 11, color: "var(--luna-text-muted)" }}>{c.label}</p>
+          </motion.div>
+        ))}
       </div>
 
-      <div className="flex flex-col gap-4 px-4">
-        {/* Wellness Check-In */}
-        <WellnessCheckIn />
-
-        {/* Nutrition score */}
-        <NutritionScore meals={meals} goals={nutritionGoals} />
-
-        {/* Empty state */}
-        {!hasAnyData && (
-          <div
-            style={{
-              padding: "32px 16px",
-              borderRadius: 20,
-              background: "oklch(0.99 0.010 78)",
-              textAlign: "center",
-              border: "1.5px dashed oklch(0.88 0.020 72)",
-            }}
-          >
-            <p style={{ fontSize: 40, marginBottom: 10 }}>📊</p>
-            <p style={{ fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
-              No data yet
-            </p>
-            <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>
-              Log your first meal to start tracking your progress.
-            </p>
-          </div>
-        )}
-
-        {/* Weekly bar chart */}
-        {hasAnyData && (
-          <div
-            className="animate-fade-up animate-fade-up-delay-1"
-            style={{
-              background: "oklch(0.99 0.010 78)",
-              borderRadius: 20,
-              padding: "16px",
-              boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
-            }}
-          >
-            <div className="flex gap-2 mb-4">
-              {CHART_TABS.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setChartTab(t)}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 999,
-                    border: "none",
-                    background: chartTab === t ? "oklch(0.62 0.12 38)" : "oklch(0.93 0.018 75)",
-                    color: chartTab === t ? "white" : "oklch(0.45 0.025 50)",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    fontFamily: "'DM Sans', sans-serif",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {t}
-                </button>
-              ))}
+      <div style={{ padding: 16, borderRadius: 18, background: "var(--luna-surface)", boxShadow: "0 4px 16px oklch(0.2 0.02 50 / 0.06)" }}>
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--luna-text)", marginBottom: 12 }}>Badges</h2>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          {badges.map((b, i) => (
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, opacity: b.got ? 1 : 0.35 }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: b.got ? "color-mix(in oklch, var(--luna-accent) 18%, transparent)" : "oklch(0.9 0.01 72)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, filter: b.got ? "none" : "grayscale(1)" }}>{b.emoji}</div>
+              <span style={{ fontSize: 9, color: "var(--luna-text-muted)", textAlign: "center", maxWidth: 56 }}>{b.label}</span>
             </div>
-
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.88 0.020 72)" vertical={false} />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", fill: "oklch(0.55 0.020 60)" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", fill: "oklch(0.65 0.015 60)" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "oklch(0.99 0.010 78)",
-                    border: "1px solid oklch(0.88 0.020 72)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                    fontFamily: "'DM Sans', sans-serif",
-                    boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.10)",
-                  }}
-                  cursor={{ fill: "oklch(0.62 0.12 38 / 0.06)" }}
-                />
-                <Bar dataKey="value" fill={barColor} radius={[6, 6, 0, 0]} maxBarSize={32} />
-              </BarChart>
-            </ResponsiveContainer>
-            <p style={{ fontSize: 11, color: "oklch(0.65 0.015 60)", marginTop: 4, fontFamily: "'DM Sans', sans-serif", textAlign: "center" }}>
-              ★ = today · Past days show as you log more over time
-            </p>
-          </div>
-        )}
-
-        {/* Today's summary */}
-        {meals.length > 0 && nutritionGoals && (
-          <div
-            className="animate-fade-up animate-fade-up-delay-2"
-            style={{
-              background: "oklch(0.99 0.010 78)",
-              borderRadius: 20,
-              padding: "16px",
-              boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
-            }}
-          >
-            <p style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
-              Today's Summary
-            </p>
-            <div className="flex flex-col gap-2">
-              {[
-                { label: "Calories",  val: meals.reduce((a,m) => a+m.calories,0), target: nutritionGoals.calorieTarget, unit: "kcal" },
-                { label: "Protein",   val: meals.reduce((a,m) => a+m.protein, 0), target: nutritionGoals.proteinTarget,  unit: "g" },
-                { label: "Carbs",     val: meals.reduce((a,m) => a+m.carbs,   0), target: nutritionGoals.carbsTarget,    unit: "g" },
-                { label: "Fats",      val: meals.reduce((a,m) => a+m.fats,    0), target: nutritionGoals.fatsTarget,     unit: "g" },
-              ].map(({ label, val, target, unit }) => {
-                const pct = Math.min((val / target) * 100, 100);
-                const color = pct >= 90 ? "oklch(0.72 0.08 148)" : pct >= 60 ? "oklch(0.78 0.10 75)" : "oklch(0.62 0.12 38)";
-                return (
-                  <div key={label}>
-                    <div className="flex justify-between mb-1">
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
-                      <span style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
-                        {val}{unit} / {target}{unit}
-                      </span>
-                    </div>
-                    <div style={{ height: 6, borderRadius: 999, background: "oklch(0.88 0.020 72)", overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${pct}%`, borderRadius: 999, background: color, transition: "width 0.8s cubic-bezier(0.23,1,0.32,1)" }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Weight log */}
-        <div
-          className="animate-fade-up animate-fade-up-delay-3"
-          style={{
-            background: "oklch(0.99 0.010 78)",
-            borderRadius: 20,
-            padding: "16px",
-            boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
-          }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <p style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
-              Weight Log (kg)
-            </p>
-            <div className="flex gap-2 items-center">
-              <input
-                type="number"
-                value={newWeight}
-                onChange={(e) => setNewWeight(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddWeight()}
-                placeholder="kg"
-                style={{
-                  width: 64,
-                  padding: "5px 8px",
-                  borderRadius: 10,
-                  border: "1.5px solid oklch(0.88 0.020 72)",
-                  fontSize: 13,
-                  fontFamily: "'DM Sans', sans-serif",
-                  color: "oklch(0.25 0.025 50)",
-                  outline: "none",
-                  background: "oklch(0.97 0.015 75)",
-                }}
-              />
-              <button
-                onClick={handleAddWeight}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 10,
-                  background: "oklch(0.62 0.12 38)",
-                  color: "white",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  fontFamily: "'DM Sans', sans-serif",
-                  border: "none",
-                }}
-              >
-                Log
-              </button>
-            </div>
-          </div>
-
-          {weightLog.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "16px 0" }}>
-              <p style={{ fontSize: 13, color: "oklch(0.65 0.015 60)", fontFamily: "'DM Sans', sans-serif" }}>
-                No weight entries yet. Log your first reading above.
-              </p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={150}>
-              <LineChart data={weightLog} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.88 0.020 72)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", fill: "oklch(0.55 0.020 60)" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={["auto", "auto"]}
-                  tick={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", fill: "oklch(0.65 0.015 60)" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "oklch(0.99 0.010 78)",
-                    border: "1px solid oklch(0.88 0.020 72)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="weight"
-                  stroke="oklch(0.62 0.12 38)"
-                  strokeWidth={2.5}
-                  dot={{ fill: "oklch(0.62 0.12 38)", r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
+          ))}
         </div>
+      </div>
+
+      <div style={{ padding: 14, borderRadius: 16, background: `linear-gradient(135deg, var(--luna-accent), var(--luna-accent2))`, textAlign: "center" }}>
+        <p style={{ fontSize: 13, color: "white", fontWeight: 500, lineHeight: 1.5 }}>
+          {meals.length + stats.checkinCount + stats.workoutCount === 0
+            ? "Every journey starts with one small log. You've got this. 🌙"
+            : "You're building a healthier rhythm — one day at a time. That's real progress. 🌙"}
+        </p>
       </div>
     </div>
   );

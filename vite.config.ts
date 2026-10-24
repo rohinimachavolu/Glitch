@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
-import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 // =============================================================================
@@ -203,10 +203,74 @@ function vitePluginStorageProxy(): Plugin {
   };
 }
 
+/**
+ * Glitch — dev API middleware
+ * Serves /api/llm and /api/whoop/* inside the Vite dev server so the
+ * Subconscious key + WHOOP secret stay server-side (and avoid CORS).
+ * Reads from process.env, which Vite loads from .env via loadEnv at config time.
+ */
+function vitePluginGlitchApi(env: Record<string, string>): Plugin {
+  const readJson = (req: any) => new Promise<any>((resolve) => {
+    let body = ""; req.on("data", (c: any) => (body += c)); req.on("end", () => { try { resolve(JSON.parse(body || "{}")); } catch { resolve({}); } });
+  });
+  const send = (res: any, status: number, obj: any) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
+
+  return {
+    name: "glitch-dev-api",
+    configureServer(server: ViteDevServer) {
+      const SUB_KEY = env.SUBCONSCIOUS_API_KEY || env.VITE_SUBCONSCIOUS_API_KEY;
+      const SUB_BASE = env.SUBCONSCIOUS_BASE_URL || "https://api.subconscious.dev/v1";
+      const WHOOP_ID = env.WHOOP_CLIENT_ID;
+      const WHOOP_SECRET = env.WHOOP_CLIENT_SECRET;
+      const WHOOP_TOKEN = "https://api.prod.whoop.com/oauth/oauth2/token";
+
+      server.middlewares.use("/api/llm", async (req, res, next) => {
+        if (req.method !== "POST") return next();
+        if (!SUB_KEY) return send(res, 501, { error: "LLM not configured" });
+        try {
+          const body = await readJson(req);
+          const r = await fetch(`${SUB_BASE}/chat/completions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUB_KEY}` },
+            body: JSON.stringify(body),
+          });
+          send(res, r.status, await r.json());
+        } catch { send(res, 502, { error: "LLM proxy failed" }); }
+      });
+
+      server.middlewares.use("/api/whoop/token", async (req, res, next) => {
+        if (req.method !== "POST") return next();
+        if (!WHOOP_ID || !WHOOP_SECRET) return send(res, 501, { error: "WHOOP not configured" });
+        try {
+          const { code, redirect_uri } = await readJson(req);
+          const form = new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri, client_id: WHOOP_ID, client_secret: WHOOP_SECRET });
+          const r = await fetch(WHOOP_TOKEN, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form });
+          send(res, r.status, await r.json());
+        } catch { send(res, 502, { error: "whoop token failed" }); }
+      });
+
+      server.middlewares.use("/api/whoop/refresh", async (req, res, next) => {
+        if (req.method !== "POST") return next();
+        if (!WHOOP_ID || !WHOOP_SECRET) return send(res, 501, { error: "WHOOP not configured" });
+        try {
+          const { refresh_token } = await readJson(req);
+          const form = new URLSearchParams({ grant_type: "refresh_token", refresh_token, client_id: WHOOP_ID, client_secret: WHOOP_SECRET, scope: "offline" });
+          const r = await fetch(WHOOP_TOKEN, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form });
+          send(res, r.status, await r.json());
+        } catch { send(res, 502, { error: "whoop refresh failed" }); }
+      });
+    },
+  };
+}
+
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
 
-export default defineConfig({
-  plugins,
+export default defineConfig(({ mode }) => {
+  // Load ALL env vars (including non-VITE_ ones) so the dev API middleware
+  // can read server-side secrets. These are never shipped to the client.
+  const env = loadEnv(mode, import.meta.dirname, "");
+  return {
+  plugins: [...plugins, vitePluginGlitchApi(env)],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -238,4 +302,5 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
+  };
 });

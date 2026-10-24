@@ -1,331 +1,122 @@
 /**
- * NutriSense AI — Dashboard (Home Tab)
- * Design: Organic Wellness Journal — warm cream, terracotta rings, sage micro bars
- * All nutrition targets come from AI-generated nutritionGoals in AppContext.
+ * Luna — Dashboard (nutrition + daily overview)
+ * Works for every mode. Shows today's nutrition, a coach line, steps, and a
+ * quick cross-link to the user's hero surface.
  */
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
-import MacroRing from "@/components/MacroRing";
-import MicroBar from "@/components/MicroBar";
-import { Flame, Loader2 } from "lucide-react";
-import { getMotivationalMessage } from "@/lib/aiService";
-import SupplementLogger from "@/components/SupplementLogger";
+import { getCoachResponse } from "@/lib/aiService";
+import { NUTRITION_ANCHORS } from "@/data/references";
+import { Flame, Sparkles } from "lucide-react";
+import VoiceAssistant from "@/components/VoiceAssistant";
+import SpotifyCard from "@/components/SpotifyCard";
+import PerlinField from "@/components/PerlinField";
 
-const MACRO_COLORS = {
-  cal:     "oklch(0.62 0.12 38)",
-  protein: "oklch(0.72 0.08 148)",
-  carbs:   "oklch(0.78 0.10 75)",
-  fats:    "oklch(0.68 0.09 25)",
-};
+function Ring({ label, value, target, unit, color }: { label: string; value: number; target: number; unit: string; color: string }) {
+  const pct = Math.min(value / target, 1);
+  const r = 30, c = 2 * Math.PI * r;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      <div style={{ position: "relative", width: 72, height: 72 }}>
+        <svg width={72} height={72} style={{ transform: "rotate(-90deg)" }}>
+          <circle cx={36} cy={36} r={r} fill="none" stroke="oklch(0.88 0.02 72)" strokeWidth={6} />
+          <motion.circle cx={36} cy={36} r={r} fill="none" stroke={color} strokeWidth={6} strokeLinecap="round"
+            strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - pct) }} transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }} />
+        </svg>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "var(--luna-text)" }}>{Math.round(value)}</span>
+          <span style={{ fontSize: 8, color: "var(--luna-text-muted)" }}>/{target}{unit}</span>
+        </div>
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--luna-text-muted)" }}>{label}</span>
+    </div>
+  );
+}
 
 export default function Dashboard() {
-  const { profile, nutritionGoals, nutritionLoading, meals, steps, streak } = useApp();
-  const [motivMsg, setMotivMsg] = useState<string | null>(null);
+  const { profile, meals, cyclePhase, cycleDay, biometrics, checkins, cycleStats } = useApp();
+  const [coach, setCoach] = useState<string | null>(null);
 
-  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const totals = meals.reduce((a, m) => ({
+    cal: a.cal + m.calories, protein: a.protein + m.protein, carbs: a.carbs + m.carbs,
+    fats: a.fats + m.fats, fiber: a.fiber + m.fiber,
+  }), { cal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
+
+  const target = {
+    cal: profile?.goal === "build_muscle" ? 2200 : profile?.goal === "lose_weight" ? 1750 : 2000,
+    protein: Math.round((profile?.weight ?? 65) * NUTRITION_ANCHORS.PROTEIN_G_PER_KG),
+    carbs: 220, fats: 60, fiber: NUTRITION_ANCHORS.FIBER_G,
+  };
+
+  useEffect(() => {
+    if (!profile) return;
+    const today = checkins.find((c) => c.date === new Date().toISOString().split("T")[0]);
+    const recovery = biometrics[biometrics.length - 1]?.recoveryScore;
+    let cancelled = false;
+    getCoachResponse({
+      name: profile.name, healthMode: profile.healthMode,
+      cyclePhase: cyclePhase ?? undefined, cycleDay: cycleDay ?? undefined,
+      mood: today?.mood, energy: today?.energy, stress: today?.stress,
+      recentRecovery: recovery, loggedCycles: cycleStats.count,
+    }).then((m) => { if (!cancelled) setCoach(m); }).catch(() => {});
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.name, cyclePhase]);
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
-  const totals = meals.reduce(
-    (acc, m) => ({
-      cal:     acc.cal     + m.calories,
-      protein: acc.protein + m.protein,
-      carbs:   acc.carbs   + m.carbs,
-      fats:    acc.fats    + m.fats,
-      fiber:   acc.fiber   + m.fiber,
-      omega3:  acc.omega3  + m.omega3,
-    }),
-    { cal: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, omega3: 0 }
-  );
-
-  // Fetch motivational message once goals are loaded and there are meals
-  useEffect(() => {
-    if (!profile || !nutritionGoals || meals.length === 0) return;
-    let cancelled = false;
-    getMotivationalMessage({
-      name: profile.name,
-      goal: profile.goal,
-      caloriesPct: totals.cal / nutritionGoals.calorieTarget,
-      proteinPct:  totals.protein / nutritionGoals.proteinTarget,
-      streakDays:  streak,
-    })
-      .then((msg) => { if (!cancelled) setMotivMsg(msg); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meals.length]);
-
-  const stepGoal = nutritionGoals?.stepGoal ?? 8000;
-  const dynamicStepGoal =
-    nutritionGoals && totals.cal > nutritionGoals.calorieTarget
-      ? stepGoal + Math.floor((totals.cal - nutritionGoals.calorieTarget) / 500) * 1000
-      : stepGoal;
-  const stepPct = Math.min((steps / dynamicStepGoal) * 100, 100);
-
-  // Loading skeleton while AI generates goals
-  if (nutritionLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 px-6" style={{ minHeight: "60vh" }}>
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: "50%",
-            background: "oklch(0.62 0.12 38 / 0.12)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Loader2 size={32} style={{ color: "oklch(0.62 0.12 38)", animation: "spin 1s linear infinite" }} />
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>
-            Personalizing your plan…
-          </p>
-          <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 6, fontFamily: "'DM Sans', sans-serif" }}>
-            Our AI is calculating your nutrition targets and exercise plan based on your profile.
-          </p>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  if (!nutritionGoals) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 px-6" style={{ minHeight: "60vh" }}>
-        <p style={{ fontSize: 14, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif", textAlign: "center" }}>
-          Could not load your nutrition plan. Please check your connection and try again.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-0 pb-2">
-      {/* Hero header */}
-      <div
-        style={{
-          background: "linear-gradient(160deg, oklch(0.62 0.12 38 / 0.12) 0%, oklch(0.97 0.015 75) 60%)",
-          padding: "20px 20px 16px",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: -30,
-            right: -30,
-            width: 120,
-            height: 120,
-            borderRadius: "60% 40% 70% 30% / 50% 60% 40% 50%",
-            background: "oklch(0.62 0.12 38 / 0.12)",
-            zIndex: 0,
-          }}
-        />
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>{today}</p>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)", marginTop: 2 }}>
-                {greeting}, {profile?.name ?? "there"} 👋
-              </h1>
-            </div>
-            <div
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl"
-              style={{ background: "oklch(0.62 0.12 38)", boxShadow: "0 4px 12px oklch(0.62 0.12 38 / 0.3)" }}
-            >
-              <Flame size={14} color="white" />
-              <span style={{ fontSize: 13, fontWeight: 700, color: "white", fontFamily: "'DM Sans', sans-serif" }}>
-                {streak} day{streak !== 1 ? "s" : ""}
-              </span>
-            </div>
-          </div>
+    <div className="luna-app" style={{ minHeight: "100%", padding: "22px 16px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+      <div>
+        <p style={{ fontSize: 12, color: "var(--luna-text-muted)" }}>{greeting}</p>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "var(--luna-text)" }}>{profile?.name} 🌙</h1>
+      </div>
 
-          {/* AI rationale banner */}
-          {nutritionGoals.rationale && (
-            <div
-              className="mt-3 px-3 py-2 rounded-xl animate-fade-up"
-              style={{ background: "oklch(0.72 0.08 148 / 0.15)", border: "1px solid oklch(0.72 0.08 148 / 0.3)" }}
-            >
-              <p style={{ fontSize: 12, color: "oklch(0.40 0.06 148)", fontFamily: "'DM Sans', sans-serif" }}>
-                🌿 {motivMsg ?? nutritionGoals.rationale}
-              </p>
-            </div>
-          )}
+      {/* Coach line */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        style={{ padding: 14, borderRadius: 16, background: `linear-gradient(135deg, var(--luna-accent), var(--luna-accent2))`, boxShadow: "0 8px 22px var(--luna-glow)", display: "flex", gap: 10, alignItems: "flex-start" }}>
+        <Sparkles size={18} color="white" style={{ flexShrink: 0, marginTop: 2 }} />
+        <p style={{ fontSize: 13, color: "white", lineHeight: 1.5, fontWeight: 500 }}>{coach ?? "Glitch is thinking about your day…"}</p>
+      </motion.div>
+
+      {/* Nutrition rings */}
+      <div style={{ padding: 16, borderRadius: 20, background: "var(--luna-surface)", boxShadow: "0 4px 16px oklch(0.2 0.02 50 / 0.06)" }}>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "var(--luna-text)", marginBottom: 14 }}>Today's nutrition</h2>
+        <div style={{ display: "flex", justifyContent: "space-around" }}>
+          <Ring label="Calories" value={totals.cal} target={target.cal} unit="" color="oklch(0.66 0.14 35)" />
+          <Ring label="Protein" value={totals.protein} target={target.protein} unit="g" color="oklch(0.70 0.14 160)" />
+          <Ring label="Carbs" value={totals.carbs} target={target.carbs} unit="g" color="oklch(0.78 0.12 85)" />
+          <Ring label="Fiber" value={totals.fiber} target={target.fiber} unit="g" color="oklch(0.66 0.13 300)" />
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 px-4 pt-2">
-        {/* Macro rings */}
-        <div
-          className="animate-fade-up animate-fade-up-delay-1"
-          style={{
-            background: "oklch(0.99 0.010 78)",
-            borderRadius: 22,
-            padding: "18px 16px",
-            boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
-          }}
-        >
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 14 }}>
-            Today's Macros
-          </h2>
-          <div className="flex justify-around">
-            <MacroRing label="Calories" value={totals.cal}     target={nutritionGoals.calorieTarget} unit="kcal" color={MACRO_COLORS.cal}     size={82} />
-            <MacroRing label="Protein"  value={totals.protein} target={nutritionGoals.proteinTarget} unit="g"    color={MACRO_COLORS.protein} size={82} />
-            <MacroRing label="Carbs"    value={totals.carbs}   target={nutritionGoals.carbsTarget}   unit="g"    color={MACRO_COLORS.carbs}   size={82} />
-            <MacroRing label="Fats"     value={totals.fats}    target={nutritionGoals.fatsTarget}    unit="g"    color={MACRO_COLORS.fats}    size={82} />
+      {/* Meals */}
+      <div>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "var(--luna-text)", marginBottom: 10 }}>Meals today</h2>
+        {meals.length === 0 ? (
+          <div style={{ padding: 20, borderRadius: 16, background: "var(--luna-surface)", textAlign: "center", border: "1.5px dashed oklch(0.85 0.02 72)" }}>
+            <p style={{ fontSize: 28, marginBottom: 6 }}>🍽️</p>
+            <p style={{ fontSize: 13, color: "var(--luna-text-muted)" }}>No meals logged. Tap <b>Log</b> to add one.</p>
           </div>
-        </div>
-
-        {/* Micronutrients */}
-        <div
-          className="animate-fade-up animate-fade-up-delay-2"
-          style={{
-            background: "oklch(0.99 0.010 78)",
-            borderRadius: 22,
-            padding: "18px 16px",
-            boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
-          }}
-        >
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 14 }}>
-            Micronutrients
-          </h2>
-          <div className="flex flex-col gap-3">
-            <MicroBar label="Fiber"       value={totals.fiber}  target={nutritionGoals.fiberTarget}  unit="g"   color="oklch(0.72 0.08 148)" />
-            <MicroBar label="Omega-3"     value={totals.omega3} target={nutritionGoals.omega3Target} unit="g"   color="oklch(0.62 0.10 200)" />
-            <MicroBar label="Vitamin D"   value={0}             target={nutritionGoals.vitDTarget}   unit=" IU" color="oklch(0.78 0.10 75)" />
-            <MicroBar label="Vitamin B12" value={0}             target={nutritionGoals.vitB12Target} unit="mcg" color="oklch(0.68 0.09 25)" />
-            <MicroBar label="Iron"        value={0}             target={nutritionGoals.ironTarget}   unit="mg"  color="oklch(0.62 0.12 38)" />
-          </div>
-
-        </div>
-
-        {/* Steps */}
-        <div
-          className="animate-fade-up animate-fade-up-delay-3"
-          style={{
-            background: "oklch(0.99 0.010 78)",
-            borderRadius: 22,
-            padding: "18px 16px",
-            boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
-          }}
-        >
-          <div className="flex justify-between items-center mb-3">
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)" }}>
-              Steps Today
-            </h2>
-            <span style={{ fontSize: 20, fontWeight: 700, color: "oklch(0.62 0.12 38)", fontFamily: "'DM Sans', sans-serif" }}>
-              {steps.toLocaleString()}
-            </span>
-          </div>
-          <div style={{ height: 10, borderRadius: 999, background: "oklch(0.88 0.020 72)", overflow: "hidden" }}>
-            <div
-              style={{
-                height: "100%",
-                width: `${stepPct}%`,
-                borderRadius: 999,
-                background: "linear-gradient(90deg, oklch(0.62 0.12 38), oklch(0.72 0.08 148))",
-                transition: "width 1s cubic-bezier(0.23, 1, 0.32, 1)",
-              }}
-            />
-          </div>
-          <p style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", marginTop: 6, fontFamily: "'DM Sans', sans-serif" }}>
-            Goal: {dynamicStepGoal.toLocaleString()} steps
-            {totals.cal > nutritionGoals.calorieTarget ? " (adjusted for extra calories)" : ""}
-          </p>
-        </div>
-
-        {/* Supplement Logger */}
-        <div className="animate-fade-up animate-fade-up-delay-5">
-          <SupplementLogger />
-        </div>
-
-        {/* Meals Today */}
-        <div className="animate-fade-up animate-fade-up-delay-4">
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700, color: "oklch(0.25 0.025 50)", marginBottom: 12 }}>
-            Meals Today
-          </h2>
-          {meals.length === 0 ? (
-            <div
-              style={{
-                padding: "24px 16px",
-                borderRadius: 18,
-                background: "oklch(0.99 0.010 78)",
-                textAlign: "center",
-                border: "1.5px dashed oklch(0.88 0.020 72)",
-              }}
-            >
-              <p style={{ fontSize: 32, marginBottom: 8 }}>🍽️</p>
-              <p style={{ fontSize: 14, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
-                No meals logged yet today. Tap <b>Log Food</b> to get started!
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {meals.map((meal, i) => (
-                <div
-                  key={meal.id}
-                  className="card-lift"
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    background: "oklch(0.99 0.010 78)",
-                    borderRadius: 18,
-                    padding: "12px 14px",
-                    boxShadow: "0 2px 10px oklch(0.25 0.025 50 / 0.06)",
-                    animationDelay: `${0.20 + i * 0.05}s`,
-                  }}
-                >
-                  {meal.imageUrl && (
-                    <img
-                      src={meal.imageUrl}
-                      alt={meal.name}
-                      style={{ width: 56, height: 56, borderRadius: 12, objectFit: "cover", flexShrink: 0 }}
-                    />
-                  )}
-                  <div className="flex flex-col justify-center flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
-                        {meal.name}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 600,
-                          padding: "2px 8px",
-                          borderRadius: 999,
-                          background: "oklch(0.62 0.12 38 / 0.12)",
-                          color: "oklch(0.50 0.10 38)",
-                          fontFamily: "'DM Sans', sans-serif",
-                        }}
-                      >
-                        {meal.type}
-                      </span>
-                    </div>
-                    <div className="flex gap-3 mt-1 flex-wrap">
-                      {[
-                        { label: "Cal", val: meal.calories, unit: "" },
-                        { label: "P",   val: meal.protein,  unit: "g" },
-                        { label: "C",   val: meal.carbs,    unit: "g" },
-                        { label: "F",   val: meal.fats,     unit: "g" },
-                      ].map(({ label, val, unit }) => (
-                        <span key={label} style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
-                          <b style={{ color: "oklch(0.35 0.025 50)" }}>{val}</b>{unit} {label}
-                        </span>
-                      ))}
-                    </div>
-                    <span style={{ fontSize: 10, color: "oklch(0.65 0.015 60)", marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
-                      {meal.time}
-                    </span>
-                  </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {meals.map((m) => (
+              <div key={m.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", borderRadius: 14, background: "var(--luna-surface)" }}>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--luna-text)" }}>{m.name}</p>
+                  <p style={{ fontSize: 11, color: "var(--luna-text-muted)" }}>{m.calories} cal · {m.protein}g P · {m.type}</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <span style={{ fontSize: 10, color: "var(--luna-text-muted)" }}>{m.time}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--luna-text-muted)", justifyContent: "center" }}>
+        <Flame size={13} /> Nutrition anchors from NIH dietary references, personalized by Luna
       </div>
     </div>
   );

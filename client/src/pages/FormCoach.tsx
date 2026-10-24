@@ -47,11 +47,11 @@ interface SessionSummary {
 type Status = "idle" | "loading" | "live" | "error";
 
 export default function FormCoach() {
-  const { exercisePlan } = useApp();
+  const { workouts } = useApp();
 
-  // Exercises in today's AI plan that the camera can actually check
+  // Exercises the user has logged that the camera can also check
   const planMatches = new Set(
-    exercisePlan.map((e) => matchFormExercise(e.name)).filter((id): id is NonNullable<typeof id> => !!id)
+    workouts.map((e) => matchFormExercise(e.name)).filter((id): id is NonNullable<typeof id> => !!id)
   );
 
   const [selected, setSelected] = useState<FormExerciseDef>(FORM_EXERCISES[0]);

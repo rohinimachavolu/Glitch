@@ -1,74 +1,76 @@
 /**
- * NutriSense AI — Groq AI Service Layer
- * Text tasks: llama-3.3-70b-versatile (fast, accurate, JSON-capable)
- * Vision tasks: meta-llama/llama-4-scout-17b-16e-instruct (food photo analysis)
- * Base URL: https://api.groq.com/openai/v1
+/**
+ * Glitch — LLM Service Layer (Subconscious, OpenAI-compatible)
+ * Prefers the server proxy (/api/llm) so the key stays off the browser.
+ * Falls back to a direct client call for local dev if a VITE key is present.
  */
+import { lookupLocal } from "@/data/nutritionDb";
+const SUB_BASE = (import.meta.env.VITE_SUBCONSCIOUS_BASE_URL as string) || "https://api.subconscious.dev/v1";
+const SUB_KEY = import.meta.env.VITE_SUBCONSCIOUS_API_KEY as string | undefined;
+const TEXT_MODEL = (import.meta.env.VITE_SUBCONSCIOUS_TEXT_MODEL as string) || "subconscious/deepseek-v4.1-flash-marathon";
+const VISION_MODEL = (import.meta.env.VITE_SUBCONSCIOUS_VISION_MODEL as string) || "subconscious/nemotron-3.5-super-vl";
 
-const GROQ_BASE = "https://api.groq.com/openai/v1";
-const GROQ_KEY  = import.meta.env.VITE_GROQ_API_KEY as string;
-const TEXT_MODEL   = "llama-3.3-70b-versatile";
-const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+type Msg = { role: string; content: any };
 
-// ── Generic text chat (JSON output) ──────────────────────────
-async function chat(
-  messages: { role: string; content: string }[],
-  json = true
-): Promise<string> {
-  const res = await fetch(`${GROQ_BASE}/chat/completions`, {
+/** Returns whether any LLM path is available (proxy is always attempted). */
+export function isLlmConfigured(): boolean {
+  return true; // server proxy may be configured even if no VITE key
+}
+
+async function callLlm(model: string, messages: Msg[], opts: { json?: boolean; maxTokens?: number } = {}): Promise<string> {
+  const body = {
+    model,
+    messages,
+    temperature: 0.3,
+    max_tokens: opts.maxTokens ?? 900,
+  };
+
+  // 1) Preferred: server proxy (keeps key server-side, avoids CORS)
+  try {
+    const res = await fetch("/api/llm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (typeof content === "string") return content;
+    }
+    // if proxy not configured (501) or failed, fall through to direct
+  } catch { /* fall through */ }
+
+  // 2) Fallback: direct client call (local dev only)
+  if (!SUB_KEY) throw new Error("No LLM available (no server proxy, no client key)");
+  const res = await fetch(`${SUB_BASE}/chat/completions`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_KEY}`,
-    },
-    body: JSON.stringify({
-      model: TEXT_MODEL,
-      messages,
-      temperature: 0.3,
-      max_tokens: 1200,
-      ...(json ? { response_format: { type: "json_object" } } : {}),
-    }),
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUB_KEY}` },
+    body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Groq API error ${res.status}: ${err}`);
-  }
+  if (!res.ok) throw new Error(`Subconscious ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return data.choices[0].message.content as string;
 }
 
+// ── Generic text chat ────────────────────────────────────────
+async function chat(messages: Msg[], _json = true): Promise<string> {
+  return callLlm(TEXT_MODEL, messages, { maxTokens: 900 });
+}
+
+/** Public raw chat (used by the voice intent parser). */
+export async function chatRaw(messages: Msg[]): Promise<string> {
+  return callLlm(TEXT_MODEL, messages, { maxTokens: 500 });
+}
+
 // ── Vision chat (food photo analysis) ────────────────────────
-async function visionChat(
-  imageBase64DataUrl: string,
-  textPrompt: string
-): Promise<string> {
-  const res = await fetch(`${GROQ_BASE}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_KEY}`,
-    },
-    body: JSON.stringify({
-      model: VISION_MODEL,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image_url", image_url: { url: imageBase64DataUrl } },
-            { type: "text", text: textPrompt },
-          ],
-        },
-      ],
-      temperature: 0.2,
-      max_tokens: 600,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Groq Vision API error ${res.status}: ${err}`);
-  }
-  const data = await res.json();
-  return data.choices[0].message.content as string;
+async function visionChat(imageBase64DataUrl: string, textPrompt: string): Promise<string> {
+  return callLlm(VISION_MODEL, [{
+    role: "user",
+    content: [
+      { type: "image_url", image_url: { url: imageBase64DataUrl } },
+      { type: "text", text: textPrompt },
+    ],
+  }], { maxTokens: 600 });
 }
 
 // ── Safe JSON parse helper ────────────────────────────────────
@@ -308,22 +310,27 @@ export interface IngredientNutrition {
 }
 
 export async function lookupIngredient(ingredient: string): Promise<IngredientNutrition> {
-  const fallback: IngredientNutrition = {
-    found: false, name: ingredient, calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, omega3: 0,
+  // Local DB first — guarantees non-zero macros even with no LLM key.
+  const local = lookupLocal(ingredient);
+  const localResult: IngredientNutrition = {
+    found: local.calories > 0, name: local.name, calories: local.calories,
+    protein: local.protein, carbs: local.carbs, fats: local.fats, fiber: local.fiber, omega3: local.omega3,
   };
 
   try {
     const prompt = `You are a nutrition database. Provide nutritional content for: "${ingredient}"
-Use a typical standard serving size.
+Account for any quantities mentioned (e.g. "100g rice" = 100g). Sum multiple items.
 
 Return ONLY valid JSON (no markdown):
-{"found":true,"name":"1 tbsp Flax Seeds","calories":37,"protein":1.3,"carbs":2.0,"fats":3.0,"fiber":1.9,"omega3":1.60}`;
+{"found":true,"name":"100g Rice + Dal","calories":246,"protein":11.7,"carbs":48,"fats":0.7,"fiber":8.4,"omega3":0.1}`;
 
     const raw = await chat([{ role: "user", content: prompt }]);
-    return safeParseJSON<IngredientNutrition>(raw, fallback);
+    const ai = safeParseJSON<IngredientNutrition>(raw, localResult);
+    // Trust AI only if it produced real numbers; else keep local.
+    return ai.calories > 0 ? ai : localResult;
   } catch (error) {
-    console.warn("Ingredient lookup failed, using local fallback:", error);
-    return fallback;
+    console.warn("LLM ingredient lookup unavailable, using local nutrition DB:", error);
+    return localResult;
   }
 }
 
@@ -344,5 +351,76 @@ export async function getMotivationalMessage(profile: {
   } catch (error) {
     console.warn("Motivational message generation failed, using local fallback:", error);
     return "Keep going — your plan is working.";
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 6. Glitch — Personalized cycle/menopause-aware coach
+// ─────────────────────────────────────────────────────────────
+import { FITNESS_EVIDENCE } from "@/data/references";
+
+export interface CoachContext {
+  name: string;
+  healthMode: string;          // cycling | irregular | pcos | menopause | pregnancy | none
+  cyclePhase?: string;
+  cycleDay?: number;
+  mood?: number;               // 1–5
+  energy?: number;             // 1–5
+  stress?: number;             // 1–5
+  recentRecovery?: number;     // 0–100 (WHOOP/sample)
+  loggedCycles?: number;
+  question?: string;           // if user is chatting
+}
+
+/**
+ * Supportive, non-judgmental coach. Reflects the user's OWN data.
+ * Never diagnoses; never prescribes "train hard in phase X" as a rule.
+ */
+export async function getCoachResponse(ctx: CoachContext): Promise<string> {
+  const fallback =
+    ctx.stress && ctx.stress >= 4
+      ? "You seem stretched today. Aim for stability, not perfection — hydrate, prioritize protein, and a short walk counts."
+      : "You're building a healthier rhythm. One good choice at a time is exactly how this works.";
+
+  try {
+    const prescriptiveNote = FITNESS_EVIDENCE.PHASE_RULE_IS_PRESCRIPTIVE
+      ? ""
+      : "The evidence on cycle phase and training is mixed, so NEVER say 'you must train hard/rest in phase X'. Instead reflect the person's own logged pattern and energy.";
+
+    const system = `You are Glitch, a warm, emotionally intelligent wellness coach for women's health (menstrual cycle, PCOS, and menopause). You are supportive and realistic, never judgmental, never shaming about food or missed days. You NEVER diagnose medical conditions and NEVER prescribe medication/HRT. You frame insights as patterns to notice or discuss with a clinician. ${prescriptiveNote} Keep replies under 60 words, specific and human.`;
+
+    const profile = `User: ${ctx.name}. Mode: ${ctx.healthMode}.` +
+      (ctx.cyclePhase ? ` Cycle phase: ${ctx.cyclePhase} (day ${ctx.cycleDay ?? "?"}).` : "") +
+      (ctx.mood != null ? ` Mood ${ctx.mood}/5, energy ${ctx.energy ?? "?"}/5, stress ${ctx.stress ?? "?"}/5.` : "") +
+      (ctx.recentRecovery != null ? ` Recent recovery ${ctx.recentRecovery}%.` : "") +
+      (ctx.loggedCycles != null ? ` ${ctx.loggedCycles} cycles logged.` : "");
+
+    const user = ctx.question
+      ? `${profile}\n\nThey asked: "${ctx.question}"\nReply supportively and specifically.`
+      : `${profile}\n\nGive one short, warm, specific suggestion for today.`;
+
+    return await chat([{ role: "system", content: system }, { role: "user", content: user }], false);
+  } catch (error) {
+    console.warn("Coach response failed, using fallback:", error);
+    return fallback;
+  }
+}
+
+/**
+ * Turn a detected correlation into a plain-language "pattern reveal" line.
+ * Input is already-computed correlation facts (no raw PII to the model).
+ */
+export async function describePattern(input: {
+  signalA: string; signalB: string; strength: number; direction: string;
+  cycleContext?: string;
+}): Promise<string> {
+  const fallback = `Your ${input.signalA} and ${input.signalB} tended to move together${input.cycleContext ? ` ${input.cycleContext}` : ""}. This is your own pattern, not a diagnosis.`;
+  try {
+    const prompt = `Write ONE short, warm sentence (max 24 words) describing this personal pattern for a wellness app user. Frame it as "your own pattern," never a diagnosis.
+Facts: ${input.signalA} and ${input.signalB} correlated (strength ${input.strength.toFixed(2)}, ${input.direction})${input.cycleContext ? `, ${input.cycleContext}` : ""}.
+Return only the sentence.`;
+    return await chat([{ role: "user", content: prompt }], false);
+  } catch {
+    return fallback;
   }
 }

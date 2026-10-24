@@ -1,358 +1,303 @@
 /**
- * NutriSense AI — Onboarding (up to 7 steps)
- * Steps: Personal Info → Goal → Equipment → Workout Style → [Women's Health if female] → Ready
- * Design: Organic Wellness Journal
+ * Luna — Onboarding
+ * Branches by biological sex → health mode. Men & prefer-not-to-say NEVER see
+ * reproductive-health questions. Determines healthMode: cycling | irregular |
+ * pcos | menopause | pregnancy | none.
  */
 import { useState } from "react";
-import {
-  useApp, FitnessGoal, Equipment, WorkoutStyle,
-  BiologicalSex, CycleStatus, PmsSymptom, HealthCondition,
-} from "@/contexts/AppContext";
-import { ChevronRight, Leaf } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useApp } from "@/contexts/AppContext";
+import type {
+  BiologicalSex, HealthMode, FitnessGoal, Equipment, WorkoutStyle,
+  PmsSymptom, MenopauseSymptom, HealthCondition, RaceEthnicity, FitnessLevel,
+} from "@/db/types";
+import { ChevronRight, Moon } from "lucide-react";
 
-const GOALS: { id: FitnessGoal; label: string; desc: string; emoji: string }[] = [
-  { id: "lose_weight",      label: "Lose Weight",     desc: "Burn fat, feel lighter",         emoji: "🔥" },
-  { id: "maintain",         label: "Stay Healthy",    desc: "Maintain current weight",        emoji: "⚖️" },
-  { id: "build_muscle",     label: "Build Muscle",    desc: "Gain strength & lean mass",      emoji: "💪" },
-  { id: "manage_diabetes",  label: "Manage Diabetes", desc: "Control blood sugar naturally",  emoji: "🌿" },
+const GOALS: { id: FitnessGoal; label: string; emoji: string }[] = [
+  { id: "lose_weight", label: "Lose weight", emoji: "🔥" },
+  { id: "maintain", label: "Stay healthy", emoji: "⚖️" },
+  { id: "build_muscle", label: "Build strength", emoji: "💪" },
+  { id: "manage_diabetes", label: "Manage blood sugar", emoji: "🌿" },
+  { id: "bone_strength", label: "Bone & muscle health", emoji: "🦴" },
 ];
 
-const EQUIPMENT_OPTIONS: { id: Equipment; label: string; emoji: string; desc: string }[] = [
-  { id: "none",             label: "No Equipment",     emoji: "🤸", desc: "Bodyweight only" },
-  { id: "dumbbells",        label: "Dumbbells",        emoji: "🏋️", desc: "Free weights at home" },
-  { id: "resistance_bands", label: "Resistance Bands", emoji: "🎗️", desc: "Portable & versatile" },
-  { id: "pull_up_bar",      label: "Pull-Up Bar",      emoji: "🔩", desc: "Door-frame mounted" },
-  { id: "kettlebells",      label: "Kettlebells",      emoji: "⚙️", desc: "Functional strength" },
-  { id: "full_gym",         label: "Full Gym Access",  emoji: "🏟️", desc: "All machines & weights" },
+const EQUIPMENT: { id: Equipment; label: string; emoji: string }[] = [
+  { id: "none", label: "Bodyweight", emoji: "🤸" },
+  { id: "dumbbells", label: "Dumbbells", emoji: "🏋️" },
+  { id: "resistance_bands", label: "Bands", emoji: "🎗️" },
+  { id: "kettlebells", label: "Kettlebells", emoji: "⚙️" },
+  { id: "pull_up_bar", label: "Pull-up bar", emoji: "🔩" },
+  { id: "full_gym", label: "Full gym", emoji: "🏟️" },
 ];
 
-const STYLE_OPTIONS: { id: WorkoutStyle; label: string; emoji: string; desc: string }[] = [
-  { id: "calisthenics",    label: "Calisthenics",    emoji: "🤸", desc: "Bodyweight skill & strength" },
-  { id: "weight_training", label: "Weight Training", emoji: "🏋️", desc: "Barbells, dumbbells, machines" },
-  { id: "yoga",            label: "Yoga",            emoji: "🧘", desc: "Flexibility & mindfulness" },
-  { id: "running",         label: "Running / Cardio",emoji: "🏃", desc: "Endurance & fat burn" },
-  { id: "hiit",            label: "HIIT",            emoji: "⚡", desc: "High-intensity intervals" },
-  { id: "pilates",         label: "Pilates",         emoji: "🌀", desc: "Core strength & posture" },
+const STYLES: { id: WorkoutStyle; label: string; emoji: string }[] = [
+  { id: "walking", label: "Walking", emoji: "🚶" },
+  { id: "calisthenics", label: "Calisthenics", emoji: "🤸" },
+  { id: "weight_training", label: "Weights", emoji: "🏋️" },
+  { id: "yoga", label: "Yoga", emoji: "🧘" },
+  { id: "running", label: "Running", emoji: "🏃" },
+  { id: "hiit", label: "HIIT", emoji: "⚡" },
+  { id: "pilates", label: "Pilates", emoji: "🌀" },
 ];
 
-const PMS_SYMPTOMS: { id: PmsSymptom; label: string; emoji: string }[] = [
-  { id: "mood_swings",        label: "Mood Swings",       emoji: "🌊" },
-  { id: "bloating",           label: "Bloating",          emoji: "💧" },
-  { id: "cravings",           label: "Cravings",          emoji: "🍫" },
-  { id: "fatigue",            label: "Fatigue",           emoji: "😴" },
-  { id: "headaches",          label: "Headaches",         emoji: "🤕" },
-  { id: "anxiety",            label: "Anxiety",           emoji: "😰" },
-  { id: "acne",               label: "Acne",              emoji: "🔴" },
-  { id: "breast_tenderness",  label: "Breast Tenderness", emoji: "💗" },
-  { id: "sleep_disturbances", label: "Sleep Issues",      emoji: "🌙" },
+const PMS: { id: PmsSymptom; label: string; emoji: string }[] = [
+  { id: "cramps" as any, label: "Cramps", emoji: "🤕" },
+  { id: "bloating", label: "Bloating", emoji: "💧" },
+  { id: "cravings", label: "Cravings", emoji: "🍫" },
+  { id: "fatigue", label: "Fatigue", emoji: "😴" },
+  { id: "mood_swings", label: "Mood swings", emoji: "🌊" },
+  { id: "headaches", label: "Headaches", emoji: "🤯" },
+  { id: "acne", label: "Acne", emoji: "🔴" },
+  { id: "breast_tenderness", label: "Tenderness", emoji: "💗" },
 ];
 
-const HEALTH_CONDITIONS: { id: HealthCondition; label: string }[] = [
-  { id: "pcos",             label: "PCOS" },
-  { id: "endometriosis",    label: "Endometriosis" },
-  { id: "heavy_periods",    label: "Heavy Periods" },
-  { id: "irregular_cycles", label: "Irregular Cycles" },
-  { id: "none",             label: "None of the above" },
+const MENO: { id: MenopauseSymptom; label: string; emoji: string }[] = [
+  { id: "hot_flashes", label: "Hot flashes", emoji: "🔥" },
+  { id: "night_sweats", label: "Night sweats", emoji: "💦" },
+  { id: "sleep_issues", label: "Sleep issues", emoji: "🌙" },
+  { id: "mood_changes", label: "Mood changes", emoji: "🌊" },
+  { id: "joint_pain", label: "Joint pain", emoji: "🦵" },
+  { id: "brain_fog", label: "Brain fog", emoji: "🌫️" },
+  { id: "low_energy", label: "Low energy", emoji: "🔋" },
+  { id: "palpitations", label: "Palpitations", emoji: "💓" },
 ];
 
-function MultiSelectGrid<T extends string>({
-  options, selected, onToggle,
-}: { options: { id: T; label: string; emoji?: string; desc?: string }[]; selected: T[]; onToggle: (id: T) => void }) {
+const CONDITIONS: { id: HealthCondition; label: string }[] = [
+  { id: "pcos", label: "PCOS" },
+  { id: "endometriosis", label: "Endometriosis" },
+  { id: "heavy_periods", label: "Heavy periods" },
+  { id: "thyroid", label: "Thyroid" },
+  { id: "diabetes", label: "Diabetes" },
+  { id: "hypertension", label: "High BP" },
+  { id: "none", label: "None" },
+];
+
+const card = (active: boolean): React.CSSProperties => ({
+  padding: "12px 14px", borderRadius: 14, textAlign: "left", transition: "all 0.15s",
+  border: active ? "2px solid var(--luna-accent)" : "1.5px solid oklch(0.85 0.02 72)",
+  background: active ? "color-mix(in oklch, var(--luna-accent) 10%, transparent)" : "var(--luna-surface)",
+  color: "var(--luna-text)", fontWeight: 600, fontSize: 13,
+});
+
+function Chip<T extends string>({ items, sel, toggle }: { items: { id: T; label: string; emoji?: string }[]; sel: T[]; toggle: (id: T) => void }) {
   return (
-    <div className="grid gap-2.5" style={{ gridTemplateColumns: "1fr 1fr" }}>
-      {options.map(({ id, label, emoji, desc }) => {
-        const isSelected = selected.includes(id);
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {items.map(({ id, label, emoji }) => {
+        const a = sel.includes(id);
         return (
-          <button key={id} onClick={() => onToggle(id)}
-            style={{
-              display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3,
-              padding: "11px 13px", borderRadius: 14, textAlign: "left", position: "relative",
-              border: isSelected ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)",
-              background: isSelected ? "oklch(0.62 0.12 38 / 0.10)" : "oklch(0.99 0.010 78)",
-              transition: "all 0.15s", boxShadow: isSelected ? "0 3px 10px oklch(0.62 0.12 38 / 0.15)" : "0 1px 4px oklch(0.25 0.025 50 / 0.05)",
-            }}>
-            {isSelected && (
-              <div style={{ position: "absolute", top: 7, right: 7, width: 15, height: 15, borderRadius: "50%", background: "oklch(0.62 0.12 38)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </div>
-            )}
-            {emoji && <span style={{ fontSize: 20 }}>{emoji}</span>}
-            <span style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.2 }}>{label}</span>
-            {desc && <span style={{ fontSize: 10, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>{desc}</span>}
-          </button>
+          <button key={id} onClick={() => toggle(id)} style={{
+            padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600, transition: "all 0.15s",
+            border: a ? "none" : "1.5px solid oklch(0.85 0.02 72)",
+            background: a ? "var(--luna-accent)" : "var(--luna-surface)",
+            color: a ? "white" : "var(--luna-text-muted)",
+          }}>{emoji} {label}</button>
         );
       })}
     </div>
   );
 }
 
-export default function Onboarding({ onDone }: { onDone: () => void }) {
-  const { setProfile } = useApp();
+export default function Onboarding() {
+  const { completeOnboarding } = useApp();
   const [step, setStep] = useState(0);
 
-  // Step 0
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
-  const [biologicalSex, setBiologicalSex] = useState<BiologicalSex>("prefer_not_to_say");
-
-  // Step 1
+  const [sex, setSex] = useState<BiologicalSex>("female");
+  const [mode, setMode] = useState<HealthMode>("cycling");
   const [goal, setGoal] = useState<FitnessGoal>("maintain");
-
-  // Step 2
   const [equipment, setEquipment] = useState<Equipment[]>(["none"]);
-
-  // Step 3
-  const [workoutStyles, setWorkoutStyles] = useState<WorkoutStyle[]>(["calisthenics"]);
-
-  // Step 4 (Women's Health — only shown if female)
-  const [cycleStatus, setCycleStatus] = useState<CycleStatus>("yes");
-  const [lastPeriodDate, setLastPeriodDate] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 14);
-    return d.toISOString().split("T")[0];
-  });
+  const [styles, setStyles] = useState<WorkoutStyle[]>(["walking"]);
   const [cycleLength, setCycleLength] = useState(28);
-  const [commonSymptoms, setCommonSymptoms] = useState<PmsSymptom[]>([]);
-  const [healthConditions, setHealthConditions] = useState<HealthCondition[]>(["none"]);
+  const [pms, setPms] = useState<PmsSymptom[]>([]);
+  const [meno, setMeno] = useState<MenopauseSymptom[]>([]);
+  const [conditions, setConditions] = useState<HealthCondition[]>(["none"]);
+  const [race, setRace] = useState<RaceEthnicity>("prefer_not_to_say");
+  const [fitLevel, setFitLevel] = useState<FitnessLevel>("beginner");
 
-  const isFemale = biologicalSex === "female";
-  // Steps: 0=Info, 1=Goal, 2=Equipment, 3=Style, [4=Women's if female], last=Ready
-  const totalSteps = isFemale ? 6 : 5;
-  const readyStep = isFemale ? 5 : 4;
-  const womensStep = 4;
+  const isFemale = sex === "female";
+  const reproMode = isFemale && mode !== "none";
+  const isCycleMode = reproMode && mode !== "menopause" && mode !== "pregnancy";
+  const isMeno = reproMode && mode === "menopause";
 
-  function toggleEquipment(id: Equipment) { setEquipment((p) => p.includes(id) ? p.filter((e) => e !== id) : [...p, id]); }
-  function toggleStyle(id: WorkoutStyle) { setWorkoutStyles((p) => p.includes(id) ? p.filter((s) => s !== id) : [...p, id]); }
-  function toggleSymptom(id: PmsSymptom) { setCommonSymptoms((p) => p.includes(id) ? p.filter((s) => s !== id) : [...p, id]); }
-  function toggleCondition(id: HealthCondition) {
-    if (id === "none") { setHealthConditions(["none"]); return; }
-    setHealthConditions((p) => {
-      const without = p.filter((c) => c !== "none");
-      return without.includes(id) ? without.filter((c) => c !== id) : [...without, id];
-    });
-  }
+  // Trimmed sequence: fewer, essential steps only.
+  const steps: string[] = ["Welcome", "You", ...(isFemale ? ["Your journey"] : []),
+    ...(isCycleMode ? ["Cycle"] : []), ...(isMeno ? ["Menopause"] : []),
+    "Goal", "Ready"];
+  const last = steps.length - 1;
 
-  function handleNext() {
-    if (step === 0 && (!name || !age || !weight || !height)) return;
-    if (step === 2 && equipment.length === 0) return;
-    if (step === 3 && workoutStyles.length === 0) return;
-    if (step < readyStep) { setStep(step + 1); return; }
-    // Final step — submit
-    setProfile({
+  const tog = <T,>(arr: T[], set: (v: T[]) => void, id: T) =>
+    set(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
+
+  function next() {
+    if (step === 1 && (!name || !age || !weight || !height)) return;
+    if (step < last) { setStep(step + 1); return; }
+    completeOnboarding({
       name, age: Number(age), weight: Number(weight), height: Number(height),
-      goal, equipment, workoutStyles, biologicalSex,
-      ...(isFemale && cycleStatus !== "no" ? {
-        womensHealth: { cycleStatus, lastPeriodDate, cycleLength, commonSymptoms, healthConditions },
-      } : {}),
+      biologicalSex: sex, raceEthnicity: race, fitnessLevel: fitLevel,
+      healthMode: isFemale ? mode : "none", goal,
+      equipment: ["none", "dumbbells"], workoutStyles: ["walking", "weight_training"],
+      cycleLength: isCycleMode ? cycleLength : undefined,
+      commonSymptoms: isCycleMode ? pms : undefined,
+      menopauseSymptoms: isMeno ? meno : undefined,
+      healthConditions: reproMode ? conditions : undefined,
     });
-    onDone();
   }
 
-  const stepLabels = isFemale
-    ? ["Your Info", "Your Goal", "Equipment", "Workout Style", "Women's Health", "Ready!"]
-    : ["Your Info", "Your Goal", "Equipment", "Workout Style", "Ready!"];
+  const label = steps[step];
+  const input = (ph: string, v: string, set: (s: string) => void, type = "text") => (
+    <input type={type} value={v} onChange={(e) => set(e.target.value)} placeholder={ph}
+      style={{ padding: "11px 14px", borderRadius: 12, border: "1.5px solid oklch(0.85 0.02 72)", background: "var(--luna-surface)", fontSize: 14, color: "var(--luna-text)", outline: "none", width: "100%" }} />
+  );
 
   return (
-    <div className="flex flex-col min-h-dvh" style={{ background: "oklch(0.97 0.015 75)", position: "relative", overflow: "hidden" }}>
-      <div style={{ position: "absolute", inset: 0, backgroundImage: `url(https://d2xsxph8kpxj0f.cloudfront.net/310519663713781500/N52YZyrsSNdjSRTgTVUb76/nutrisense-onboarding-3SmdPTeErfea5KVPWPdRcD.webp)`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.14, zIndex: 0 }} />
-
-      <div className="relative z-10 flex flex-col flex-1 px-5 pt-10 pb-8" style={{ overflowY: "auto" }}>
-        {/* Logo */}
-        <div className="flex items-center gap-2 mb-5 animate-fade-up">
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "oklch(0.62 0.12 38)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px oklch(0.62 0.12 38 / 0.35)" }}>
-            <Leaf size={16} color="white" />
+    <div className="luna-app luna-scroll" style={{ position: "relative", overflow: "auto", height: "100dvh", padding: "40px 22px 28px", display: "flex", flexDirection: "column" }}>
+      <div className="luna-aurora" />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: "var(--luna-accent)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 18px var(--luna-glow)" }}>
+            <Moon size={18} color="white" />
           </div>
           <div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: "oklch(0.25 0.025 50)" }}>NutriSense AI</div>
-            <div style={{ fontSize: 10, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>Your wellness companion</div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 19, color: "var(--luna-text)" }}>Glitch</div>
+            <div style={{ fontSize: 11, color: "var(--luna-text-muted)" }}>Menopause & cycle companion</div>
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="flex gap-1 mb-2 animate-fade-up animate-fade-up-delay-1">
-          {stepLabels.map((_, i) => (
-            <div key={i} style={{ flex: i === step ? 3 : 1, height: 5, borderRadius: 999, background: i <= step ? "oklch(0.62 0.12 38)" : "oklch(0.88 0.020 72)", transition: "all 0.3s cubic-bezier(0.23, 1, 0.32, 1)" }} />
+        {/* Progress */}
+        <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+          {steps.map((_, i) => (
+            <div key={i} style={{ flex: i === step ? 3 : 1, height: 5, borderRadius: 999, background: i <= step ? "var(--luna-accent)" : "oklch(0.85 0.02 72)", transition: "all 0.3s" }} />
           ))}
         </div>
-        <p style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", marginBottom: 14, fontFamily: "'DM Sans', sans-serif" }}>
-          Step {step + 1} of {totalSteps} — {stepLabels[step]}
-        </p>
 
-        {/* ── Step 0: Personal Info + Sex ── */}
-        {step === 0 && (
-          <div className="flex flex-col gap-3 flex-1 animate-fade-up animate-fade-up-delay-2">
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>Let's get to know you</h1>
-            <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>We'll personalize your plan just for you.</p>
-            {[
-              { label: "Your name",   value: name,   set: setName,   type: "text",   ph: "e.g. Priya" },
-              { label: "Age (years)", value: age,    set: setAge,    type: "number", ph: "e.g. 28" },
-              { label: "Weight (kg)", value: weight, set: setWeight, type: "number", ph: "e.g. 65" },
-              { label: "Height (cm)", value: height, set: setHeight, type: "number", ph: "e.g. 165" },
-            ].map(({ label, value, set, type, ph }) => (
-              <div key={label} className="flex flex-col gap-1">
-                <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{label}</label>
-                <input type={type} value={value} onChange={(e) => set(e.target.value)} placeholder={ph}
-                  style={{ padding: "10px 13px", borderRadius: 11, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.99 0.010 78)", fontSize: 14, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif", outline: "none" }}
-                  onFocus={(e) => (e.target.style.borderColor = "oklch(0.62 0.12 38)")}
-                  onBlur={(e) => (e.target.style.borderColor = "oklch(0.88 0.020 72)")} />
+        <AnimatePresence mode="wait">
+          <motion.div key={step} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.25 }}
+            style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+
+            {label === "Welcome" && (
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, gap: 14 }}>
+                <span style={{ fontSize: 46 }}>🌙</span>
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: "var(--luna-text)", lineHeight: 1.2 }}>
+                  Your body has a rhythm. Luna helps you see it.
+                </h1>
+                <p style={{ fontSize: 14, color: "var(--luna-text-muted)", lineHeight: 1.6 }}>
+                  Cycle-aware and menopause-aware support that turns your wearable signals and how you feel into a living picture — with or without a WHOOP.
+                </p>
               </div>
-            ))}
-            {/* Biological sex */}
-            <div className="flex flex-col gap-1.5">
-              <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Biological Sex</label>
-              <div className="flex gap-2">
-                {([["female","Female","♀️"],["male","Male","♂️"],["prefer_not_to_say","Prefer Not to Say","—"]] as [BiologicalSex,string,string][]).map(([id, label, icon]) => (
-                  <button key={id} onClick={() => setBiologicalSex(id)}
-                    style={{ flex: 1, padding: "9px 6px", borderRadius: 11, border: biologicalSex === id ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: biologicalSex === id ? "oklch(0.62 0.12 38 / 0.10)" : "oklch(0.99 0.010 78)", fontSize: 11, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
-                    {icon} {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* ── Step 1: Goal ── */}
-        {step === 1 && (
-          <div className="flex flex-col gap-3 flex-1 animate-fade-up animate-fade-up-delay-2">
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>What's your goal?</h1>
-            {GOALS.map(({ id, label, desc, emoji }) => (
-              <button key={id} onClick={() => setGoal(id)}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 15px", borderRadius: 15, border: goal === id ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: goal === id ? "oklch(0.62 0.12 38 / 0.08)" : "oklch(0.99 0.010 78)", textAlign: "left", transition: "all 0.15s" }}>
-                <span style={{ fontSize: 24 }}>{emoji}</span>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
-                  <div style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>{desc}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* ── Step 2: Equipment ── */}
-        {step === 2 && (
-          <div className="flex flex-col gap-3 flex-1 animate-fade-up animate-fade-up-delay-2">
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>What equipment do you have?</h1>
-            <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>Select all that apply.</p>
-            <MultiSelectGrid options={EQUIPMENT_OPTIONS} selected={equipment} onToggle={toggleEquipment} />
-          </div>
-        )}
-
-        {/* ── Step 3: Workout Style ── */}
-        {step === 3 && (
-          <div className="flex flex-col gap-3 flex-1 animate-fade-up animate-fade-up-delay-2">
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>What training do you enjoy?</h1>
-            <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>Pick your favourites — AI will always prioritize your goal.</p>
-            <MultiSelectGrid options={STYLE_OPTIONS} selected={workoutStyles} onToggle={toggleStyle} />
-            <div style={{ padding: "9px 12px", borderRadius: 11, background: "oklch(0.72 0.08 148 / 0.12)", border: "1px solid oklch(0.72 0.08 148 / 0.3)" }}>
-              <p style={{ fontSize: 11, color: "oklch(0.40 0.06 148)", fontFamily: "'DM Sans', sans-serif" }}>💡 Even if you prefer yoga, AI will suggest complementary strength work for your goal.</p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 4: Women's Health (female only) ── */}
-        {step === womensStep && isFemale && (
-          <div className="flex flex-col gap-4 flex-1 animate-fade-up animate-fade-up-delay-2">
-            <div>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>Women's Health Profile</h1>
-              <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif", marginTop: 3 }}>This helps us give you cycle-aware nutrition and fitness guidance.</p>
-            </div>
-
-            {/* Cycle status */}
-            <div className="flex flex-col gap-1.5">
-              <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Do you currently experience menstrual cycles?</label>
-              <div className="flex gap-2">
-                {([["yes","Yes"],["no","No"],["irregular","Irregular"]] as [CycleStatus,string][]).map(([id, label]) => (
-                  <button key={id} onClick={() => setCycleStatus(id)}
-                    style={{ flex: 1, padding: "8px", borderRadius: 10, border: cycleStatus === id ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: cycleStatus === id ? "oklch(0.62 0.12 38 / 0.10)" : "oklch(0.99 0.010 78)", fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {cycleStatus !== "no" && (
+            {label === "You" && (
               <>
-                {/* Last period date */}
-                <div className="flex flex-col gap-1">
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Last Period Start Date</label>
-                  <input type="date" value={lastPeriodDate} onChange={(e) => setLastPeriodDate(e.target.value)}
-                    style={{ padding: "10px 13px", borderRadius: 11, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.99 0.010 78)", fontSize: 14, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif", outline: "none", width: "100%" }} />
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "var(--luna-text)" }}>Let's get to know you</h1>
+                {input("Your name", name, setName)}
+                <div style={{ display: "flex", gap: 10 }}>
+                  {input("Age", age, setAge, "number")}
+                  {input("Weight (kg)", weight, setWeight, "number")}
+                  {input("Height (cm)", height, setHeight, "number")}
                 </div>
-
-                {/* Cycle length */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between">
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Average Cycle Length</label>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "oklch(0.62 0.12 38)", fontFamily: "'DM Sans', sans-serif" }}>{cycleLength} days</span>
-                  </div>
-                  <input type="range" min={21} max={40} value={cycleLength} onChange={(e) => setCycleLength(Number(e.target.value))}
-                    style={{ width: "100%", accentColor: "oklch(0.62 0.12 38)" }} />
-                  <div className="flex justify-between">
-                    <span style={{ fontSize: 10, color: "oklch(0.65 0.015 60)", fontFamily: "'DM Sans', sans-serif" }}>21 days</span>
-                    <span style={{ fontSize: 10, color: "oklch(0.65 0.015 60)", fontFamily: "'DM Sans', sans-serif" }}>40 days</span>
-                  </div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--luna-text-muted)", marginTop: 4 }}>Biological sex</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {([["female", "Female ♀"], ["male", "Male ♂"], ["prefer_not_to_say", "Prefer not to say"]] as [BiologicalSex, string][]).map(([id, l]) => (
+                    <button key={id} onClick={() => setSex(id)} style={{ ...card(sex === id), flex: 1, textAlign: "center", fontSize: 12 }}>{l}</button>
+                  ))}
                 </div>
+                {!isFemale && (
+                  <p style={{ fontSize: 11, color: "var(--luna-text-muted)", fontStyle: "italic" }}>
+                    You'll get the fitness & nutrition experience — no cycle questions.
+                  </p>
+                )}
+              </>
+            )}
 
-                {/* Common symptoms */}
-                <div className="flex flex-col gap-2">
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Common Symptoms (select all that apply)</label>
-                  <div className="flex flex-wrap gap-2">
-                    {PMS_SYMPTOMS.map(({ id, label, emoji }) => (
-                      <button key={id} onClick={() => toggleSymptom(id)}
-                        style={{ padding: "5px 11px", borderRadius: 999, border: commonSymptoms.includes(id) ? "none" : "1.5px solid oklch(0.88 0.020 72)", background: commonSymptoms.includes(id) ? "oklch(0.62 0.12 38)" : "oklch(0.99 0.010 78)", color: commonSymptoms.includes(id) ? "white" : "oklch(0.45 0.025 50)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
-                        {emoji} {label}
-                      </button>
-                    ))}
-                  </div>
+            {label === "Your journey" && (
+              <>
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "var(--luna-text)" }}>Where are you right now?</h1>
+                <p style={{ fontSize: 12, color: "var(--luna-text-muted)" }}>This shapes everything Luna shows you.</p>
+                {([
+                  ["cycling", "🌸 I have regular cycles", "Track phases, symptoms & predictions"],
+                  ["irregular", "🌀 My cycles are irregular", "Wider predictions, pattern-aware"],
+                  ["pcos", "💠 I have / suspect PCOS", "Surface patterns to discuss with a clinician"],
+                  ["menopause", "🌗 I'm in peri/menopause", "Hot-flash tracking & transition support"],
+                  ["pregnancy", "🤰 I'm pregnant", "Gentle logging & support only"],
+                  ["none", "🏃 Just fitness & nutrition", "Skip cycle features"],
+                ] as [HealthMode, string, string][]).map(([id, t, d]) => (
+                  <button key={id} onClick={() => setMode(id)} style={{ ...card(mode === id), display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span>{t}</span>
+                    <span style={{ fontSize: 11, fontWeight: 400, color: "var(--luna-text-muted)" }}>{d}</span>
+                  </button>
+                ))}
+              </>
+            )}
+
+            {label === "Cycle" && (
+              <>
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "var(--luna-text)" }}>Your cycle</h1>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--luna-text)" }}>Average cycle length</label>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--luna-accent)" }}>{cycleLength} days</span>
                 </div>
+                <input type="range" min={21} max={45} value={cycleLength} onChange={(e) => setCycleLength(Number(e.target.value))} style={{ width: "100%", accentColor: "var(--luna-accent)" }} />
+                <p style={{ fontSize: 11, color: "var(--luna-text-muted)" }}>You'll log your actual periods inside — this is just a starting point. Most cycles vary several days month to month.</p>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--luna-text-muted)", marginTop: 6 }}>Symptoms you usually notice</label>
+                <Chip items={PMS} sel={pms} toggle={(id) => tog(pms, setPms, id)} />
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--luna-text-muted)", marginTop: 6 }}>Any conditions? (optional)</label>
+                <Chip items={CONDITIONS} sel={conditions} toggle={(id) => id === "none" ? setConditions(["none"]) : tog(conditions.filter((c) => c !== "none"), setConditions, id)} />
+              </>
+            )}
 
-                {/* Health conditions */}
-                <div className="flex flex-col gap-2">
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Health Conditions</label>
-                  <div className="flex flex-wrap gap-2">
-                    {HEALTH_CONDITIONS.map(({ id, label }) => (
-                      <button key={id} onClick={() => toggleCondition(id)}
-                        style={{ padding: "5px 11px", borderRadius: 999, border: healthConditions.includes(id) ? "none" : "1.5px solid oklch(0.88 0.020 72)", background: healthConditions.includes(id) ? "oklch(0.68 0.09 25)" : "oklch(0.99 0.010 78)", color: healthConditions.includes(id) ? "white" : "oklch(0.45 0.025 50)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+            {label === "Menopause" && (
+              <>
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "var(--luna-text)" }}>Your transition</h1>
+                <p style={{ fontSize: 12, color: "var(--luna-text-muted)" }}>Glitch tracks hot flashes, night sweats, sleep & recovery, and flags perimenopause signals.</p>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--luna-text-muted)" }}>Symptoms you experience</label>
+                <Chip items={MENO} sel={meno} toggle={(id) => tog(meno, setMeno, id)} />
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--luna-text-muted)", marginTop: 6 }}>Race / ethnicity <span style={{ fontWeight: 400 }}>(optional)</span></label>
+                <Chip items={([
+                  ["asian","Asian"],["black","Black"],["hispanic","Hispanic"],["white","White"],
+                  ["middle_eastern","M. Eastern"],["multiracial","Multiracial"],["other","Other"],["prefer_not_to_say","Skip"],
+                ] as [RaceEthnicity,string][]).map(([id,label]) => ({ id, label }))}
+                  sel={[race]} toggle={(id) => setRace(id)} />
+              </>
+            )}
+
+            {label === "Goal" && (
+              <>
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "var(--luna-text)" }}>What's your goal?</h1>
+                {GOALS.map(({ id, label: l, emoji }) => (
+                  <button key={id} onClick={() => setGoal(id)} style={{ ...card(goal === id), display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>{emoji}</span> {l}
+                  </button>
+                ))}
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--luna-text-muted)", marginTop: 8 }}>Your fitness level</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {(["beginner","intermediate","advanced"] as FitnessLevel[]).map((l) => (
+                    <button key={l} onClick={() => setFitLevel(l)} style={{ ...card(fitLevel === l), flex: 1, textAlign: "center", fontSize: 12, textTransform: "capitalize" }}>{l}</button>
+                  ))}
                 </div>
               </>
             )}
-          </div>
-        )}
 
-        {/* ── Ready step ── */}
-        {step === readyStep && (
-          <div className="flex flex-col items-center justify-center flex-1 gap-5 animate-fade-up animate-fade-up-delay-2">
-            <div style={{ width: 88, height: 88, borderRadius: "50%", background: "oklch(0.62 0.12 38 / 0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 42 }}>🌱</span>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>You're all set, {name}!</h1>
-              <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 8, lineHeight: 1.6, fontFamily: "'DM Sans', sans-serif" }}>
-                Our AI is building your personalized nutrition targets and workout plan.
-                {isFemale && cycleStatus !== "no" && " Cycle-aware recommendations are enabled."}
-              </p>
-              <div className="flex flex-wrap gap-2 justify-center mt-4">
-                {[...equipment, ...workoutStyles].map((tag) => (
-                  <span key={tag} style={{ padding: "3px 9px", borderRadius: 999, background: "oklch(0.62 0.12 38 / 0.10)", color: "oklch(0.50 0.10 38)", fontSize: 10, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>
-                    {tag.replace(/_/g, " ")}
-                  </span>
-                ))}
+
+
+            {label === "Ready" && (
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", flex: 1, gap: 16, textAlign: "center" }}>
+                <motion.span animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 2, repeat: Infinity }} style={{ fontSize: 56 }}>🌙</motion.span>
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, fontWeight: 700, color: "var(--luna-text)" }}>You're all set, {name}!</h1>
+                <p style={{ fontSize: 13, color: "var(--luna-text-muted)", lineHeight: 1.6 }}>
+                  Luna has loaded a sample of signal data so you can explore right away. Connect WHOOP anytime to make it yours.
+                </p>
               </div>
-            </div>
-          </div>
-        )}
+            )}
+          </motion.div>
+        </AnimatePresence>
 
-        {/* CTA */}
-        <button onClick={handleNext} className="flex items-center justify-center gap-2 mt-5"
-          style={{ padding: "14px 24px", borderRadius: 15, background: "oklch(0.62 0.12 38)", color: "white", fontWeight: 600, fontSize: 15, fontFamily: "'DM Sans', sans-serif", border: "none", boxShadow: "0 6px 20px oklch(0.62 0.12 38 / 0.35)" }}>
-          {step < readyStep ? "Continue" : "Start My Journey"} <ChevronRight size={17} />
-        </button>
+        <motion.button whileTap={{ scale: 0.97 }} onClick={next}
+          style={{ marginTop: 18, padding: "15px", borderRadius: 15, background: "var(--luna-accent)", color: "white", fontWeight: 700, fontSize: 15, border: "none", boxShadow: "0 8px 22px var(--luna-glow)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          {step === last ? "Enter Glitch" : "Continue"} <ChevronRight size={18} />
+        </motion.button>
       </div>
     </div>
   );

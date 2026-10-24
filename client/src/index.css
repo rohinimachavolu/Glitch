@@ -212,3 +212,58 @@ button:active:not(:disabled) {
 .bottom-nav-spacer {
   height: 80px;
 }
+
+/* ============================================================
+   Luna — Adaptive theme variables (set at runtime by LunaThemeProvider)
+   Fallbacks keep things sane before the first palette applies.
+   ============================================================ */
+:root {
+  --luna-bg: oklch(0.97 0.02 90);
+  --luna-bg2: oklch(0.95 0.03 140);
+  --luna-surface: oklch(0.995 0.01 90);
+  --luna-accent: oklch(0.68 0.12 150);
+  --luna-accent2: oklch(0.75 0.10 160);
+  --luna-text: oklch(0.25 0.025 50);
+  --luna-text-muted: oklch(0.52 0.02 60);
+  --luna-glow: oklch(0.70 0.14 150 / 0.4);
+}
+
+.luna-app {
+  min-height: 100dvh;
+  background: linear-gradient(170deg, var(--luna-bg) 0%, var(--luna-bg2) 100%);
+  color: var(--luna-text);
+  transition: background 1.2s ease, color 0.8s ease;
+}
+
+.luna-surface {
+  background: var(--luna-surface);
+  color: var(--luna-text);
+  transition: background 0.8s ease;
+}
+
+/* Animated aurora backdrop used behind the orb / hero areas */
+@keyframes lunaDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(4%, -3%) scale(1.08); }
+  66%      { transform: translate(-3%, 4%) scale(0.96); }
+}
+.luna-aurora {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(40% 40% at 25% 25%, var(--luna-glow), transparent 70%),
+    radial-gradient(45% 45% at 75% 65%, var(--luna-accent2), transparent 72%);
+  opacity: 0.35;
+  filter: blur(40px);
+  animation: lunaDrift 18s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luna-aurora { animation: none; }
+  .luna-app { transition: none; }
+}
+
+/* Hide scrollbars inside the phone shell scroll area */
+.luna-scroll::-webkit-scrollbar { display: none; }
+.luna-scroll { -ms-overflow-style: none; scrollbar-width: none; }

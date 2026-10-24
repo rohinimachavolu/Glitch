@@ -1,399 +1,148 @@
 /**
- * NutriSense AI — App Context (AI-powered + Women's Health)
+ * Luna — App Context (Dexie-backed, persistent)
+ * Loads everything from IndexedDB on mount; all mutations write through.
  */
 import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  ReactNode,
+  createContext, useContext, useEffect, useState, useCallback, ReactNode,
 } from "react";
+import { db } from "@/db/database";
 import {
-  generateNutritionGoals,
-  generateExercisePlan,
-  NutritionGoals,
-  Exercise,
-} from "@/lib/aiService";
+  profileRepo, periodsRepo, checkinsRepo, biometricsRepo, hotFlashesRepo,
+  mealsRepo, workoutsRepo, supplementsRepo, recordsRepo,
+  getCycleWindows, getCycleStats, CycleWindow,
+} from "@/db/repositories";
+import type {
+  UserProfile, PeriodEntry, CycleCheckin, BiometricEntry, HotFlashEvent,
+  Meal, WorkoutLog, Supplement, HealthRecord, HealthMode,
+} from "@/db/types";
+import { seedSampleData, syncWhoopData, isWhoopConnected } from "@/lib/whoop";
+import { getCycleDay, getCyclePhase, predictNextPeriod } from "@/lib/cycleEngine";
+import { CYCLE } from "@/data/references";
+import type { CyclePhase, PeriodPrediction } from "@/db/types";
 
-export type FitnessGoal =
-  | "lose_weight"
-  | "maintain"
-  | "build_muscle"
-  | "manage_diabetes";
-
-export type Equipment = "none" | "dumbbells" | "resistance_bands" | "full_gym" | "kettlebells" | "pull_up_bar";
-export type WorkoutStyle = "calisthenics" | "weight_training" | "yoga" | "running" | "hiit" | "pilates";
-export type BiologicalSex = "female" | "male" | "prefer_not_to_say";
-export type CycleStatus = "yes" | "no" | "irregular";
-export type PmsSymptom = "mood_swings" | "bloating" | "cravings" | "fatigue" | "headaches" | "anxiety" | "acne" | "breast_tenderness" | "sleep_disturbances";
-export type HealthCondition = "pcos" | "endometriosis" | "heavy_periods" | "irregular_cycles" | "none";
-export type CyclePhase = "menstrual" | "follicular" | "ovulation" | "luteal";
-
-export interface WomensHealthProfile {
-  cycleStatus: CycleStatus;
-  lastPeriodDate: string;       // ISO date string
-  cycleLength: number;          // days, default 28
-  commonSymptoms: PmsSymptom[];
-  healthConditions: HealthCondition[];
-}
-
-export interface UserProfile {
-  name: string;
-  age: number;
-  weight: number;
-  height: number;
-  goal: FitnessGoal;
-  equipment: Equipment[];
-  workoutStyles: WorkoutStyle[];
-  biologicalSex: BiologicalSex;
-  womensHealth?: WomensHealthProfile;
-}
-
-export interface Meal {
-  id: string;
-  type: "Breakfast" | "Lunch" | "Dinner" | "Snack";
-  name: string;
-  imageUrl?: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fats: number;
-  fiber: number;
-  omega3: number;
-  time: string;
-}
-
-export interface WeightEntry {
-  date: string;
-  weight: number;
-}
-
-export interface WellnessEntry {
-  date: string;
-  mood: number;
-  energy: number;
-  stress: number;
-  sleepHours: number;
-  cravings: string[];
-  notes: string;
-}
-
-export interface CycleSymptomEntry {
-  date: string;
-  cycleDay: number;
-  mood: number;       // 1-5
-  energy: number;     // 1-5
-  stress: number;     // 1-5
-  bloating: number;   // 1-5
-  cramps: number;     // 1-5
-  cravings: number;   // 1-5
-  sleepQuality: number; // 1-5
-  notes: string;
-}
-
-export interface PeriodEntry {
-  startDate: string;
-  endDate?: string;
-}
-
-export interface Supplement {
-  id: string;
-  name: string;
-  dose: string;
-  time: string;
-  emoji: string;
-}
-
-export type { Exercise };
-
-// ── Weekly Workout Plan ──────────────────────────────────────
-export interface WorkoutExercise extends Exercise {
-  id: string;           // Unique ID for this exercise in the plan
-  dayOfWeek: number;    // 0=Monday, 6=Sunday
-  completed: boolean;   // Exercise-level completion
-  customNotes?: string; // User can add personal notes
-}
-
-export interface WeeklyWorkoutPlan {
-  id: string;
-  daysPerWeek: number;  // 1-7
-  exercises: WorkoutExercise[];
-  createdAt: string;
-  lastUpdated: string;
-  cyclePhaseAtCreation?: CyclePhase; // For female users
-}
-
-// ── Cycle utility functions ──────────────────────────────────
-export function getCycleDay(lastPeriodDate: string, today = new Date()): number {
-  const start = new Date(lastPeriodDate);
-  const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(1, (diff % 28) + 1);
-}
-
-export function getCyclePhase(cycleDay: number, cycleLength = 28): CyclePhase {
-  const menstrualEnd = 5;
-  const follicularEnd = Math.round(cycleLength * 0.43);
-  const ovulationEnd = Math.round(cycleLength * 0.57);
-  if (cycleDay <= menstrualEnd) return "menstrual";
-  if (cycleDay <= follicularEnd) return "follicular";
-  if (cycleDay <= ovulationEnd) return "ovulation";
-  return "luteal";
-}
-
-export function getNextPeriodDate(lastPeriodDate: string, cycleLength = 28): Date {
-  const start = new Date(lastPeriodDate);
-  return new Date(start.getTime() + cycleLength * 24 * 60 * 60 * 1000);
-}
-
-export function getOvulationDate(lastPeriodDate: string, cycleLength = 28): Date {
-  const start = new Date(lastPeriodDate);
-  return new Date(start.getTime() + Math.round(cycleLength * 0.5) * 24 * 60 * 60 * 1000);
-}
-
-// ── App State ────────────────────────────────────────────────
-export interface AppState {
+interface AppState {
+  ready: boolean;
   profile: UserProfile | null;
-  nutritionGoals: NutritionGoals | null;
-  nutritionLoading: boolean;
-  exercisePlan: Exercise[];
-  exerciseLoading: boolean;
-  weeklyWorkoutPlan: WeeklyWorkoutPlan | null;
-  weeklyPlanLoading: boolean;
+  periods: PeriodEntry[];
+  checkins: CycleCheckin[];
+  biometrics: BiometricEntry[];
+  hotFlashes: HotFlashEvent[];
   meals: Meal[];
-  steps: number;
-  streak: number;
-  weightLog: WeightEntry[];
-  wellnessLog: WellnessEntry[];
-  cycleSymptomLog: CycleSymptomEntry[];
-  periodLog: PeriodEntry[];
+  workouts: WorkoutLog[];
   supplements: Supplement[];
-  completedExercises: string[];
+  records: HealthRecord[];
+  cycleWindows: CycleWindow[];
+  cycleStats: { count: number; mean: number | null; sd: number | null; lengths: number[] };
+  whoopConnected: boolean;
+  usingSample: boolean;
 }
 
 interface AppContextType extends AppState {
-  setProfile: (p: UserProfile) => void;
-  addMeal: (m: Meal) => void;
-  setSteps: (s: number) => void;
-  toggleExercise: (id: string) => void;
-  addWeightEntry: (e: WeightEntry) => void;
-  addWellnessEntry: (e: WellnessEntry) => void;
-  addCycleSymptomEntry: (e: CycleSymptomEntry) => void;
-  logPeriodStart: (date: string) => void;
-  addSupplement: (s: Supplement) => void;
-  removeSupplement: (id: string) => void;
-  refreshExercisePlan: () => void;
-  generateWeeklyPlan: (daysPerWeek: number) => Promise<void>;
-  updateWeeklyPlan: (plan: WeeklyWorkoutPlan) => void;
-  toggleExerciseCompletion: (exerciseId: string) => void;
-  addCustomExerciseToDay: (dayOfWeek: number, exercise: WorkoutExercise) => void;
-  removeExerciseFromDay: (exerciseId: string) => void;
-  editExerciseInPlan: (exerciseId: string, updates: Partial<WorkoutExercise>) => void;
+  // derived
+  cycleDay: number | null;
+  cyclePhase: CyclePhase | null;
+  cycleLength: number;
+  prediction: PeriodPrediction | null;
+  todayMood: number | undefined;
+  // actions
+  completeOnboarding: (p: Omit<UserProfile, "id" | "createdAt">) => Promise<void>;
+  reload: () => Promise<void>;
+  addPeriod: (e: Omit<PeriodEntry, "id">) => Promise<void>;
+  removePeriod: (id: number) => Promise<void>;
+  saveCheckin: (e: Omit<CycleCheckin, "id">) => Promise<void>;
+  logHotFlash: (e: Omit<HotFlashEvent, "id">) => Promise<void>;
+  addMeal: (m: Omit<Meal, "id">) => Promise<void>;
+  addWorkout: (w: Omit<WorkoutLog, "id">) => Promise<void>;
+  toggleWorkout: (id: number, completed: boolean) => Promise<void>;
+  addSupplement: (s: Omit<Supplement, "id">) => Promise<void>;
+  removeSupplement: (id: number) => Promise<void>;
+  addRecord: (r: Omit<HealthRecord, "id">) => Promise<void>;
+  removeRecord: (id: number) => Promise<void>;
+  connectWhoop: () => Promise<void>;
+  resyncWhoop: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
+const todayISO = () => new Date().toISOString().split("T")[0];
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfileState] = useState<UserProfile | null>(null);
-  const [nutritionGoals, setNutritionGoals] = useState<NutritionGoals | null>(null);
-  const [nutritionLoading, setNutritionLoading] = useState(false);
-  const [exercisePlan, setExercisePlan] = useState<Exercise[]>([]);
-  const [exerciseLoading, setExerciseLoading] = useState(false);
-  const [weeklyWorkoutPlan, setWeeklyWorkoutPlanState] = useState<WeeklyWorkoutPlan | null>(null);
-  const [weeklyPlanLoading, setWeeklyPlanLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [periods, setPeriods] = useState<PeriodEntry[]>([]);
+  const [checkins, setCheckins] = useState<CycleCheckin[]>([]);
+  const [biometrics, setBiometrics] = useState<BiometricEntry[]>([]);
+  const [hotFlashes, setHotFlashes] = useState<HotFlashEvent[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
-  const [steps, setStepsState] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [weightLog, setWeightLog] = useState<WeightEntry[]>([]);
-  const [wellnessLog, setWellnessLog] = useState<WellnessEntry[]>([]);
-  const [cycleSymptomLog, setCycleSymptomLog] = useState<CycleSymptomEntry[]>([]);
-  const [periodLog, setPeriodLog] = useState<PeriodEntry[]>([]);
+  const [workouts, setWorkouts] = useState<WorkoutLog[]>([]);
   const [supplements, setSupplements] = useState<Supplement[]>([]);
-  const [completedExercises, setCompleted] = useState<string[]>([]);
+  const [records, setRecords] = useState<HealthRecord[]>([]);
+  const [cycleWindows, setCycleWindows] = useState<CycleWindow[]>([]);
+  const [cycleStats, setCycleStats] = useState<AppState["cycleStats"]>({ count: 0, mean: null, sd: null, lengths: [] });
+  const [whoopConnected, setWhoopConnected] = useState(false);
 
-  const fetchExercisePlan = useCallback(async (p: UserProfile) => {
-    setExerciseLoading(true);
-    try {
-      const phase = p.womensHealth?.lastPeriodDate
-        ? getCyclePhase(getCycleDay(p.womensHealth.lastPeriodDate), p.womensHealth.cycleLength)
-        : undefined;
-      const plan = await generateExercisePlan({
-        age: p.age, weight: p.weight, height: p.height, goal: p.goal,
-        equipment: p.equipment, workoutStyles: p.workoutStyles,
-        cyclePhase: phase,
-      });
-      setExercisePlan(plan);
-    } catch (err) {
-      console.error("Exercise plan generation failed:", err);
-    } finally {
-      setExerciseLoading(false);
-    }
+  const reload = useCallback(async () => {
+    const [p, per, ch, bio, hf, ml, wo, sup, rec, win, stats, wc] = await Promise.all([
+      profileRepo.get(), periodsRepo.all(), checkinsRepo.all(), biometricsRepo.all(),
+      hotFlashesRepo.all(), mealsRepo.byDate(todayISO()), workoutsRepo.all(),
+      supplementsRepo.all(), recordsRepo.all(), getCycleWindows(), getCycleStats(),
+      isWhoopConnected(),
+    ]);
+    setProfile(p ?? null);
+    setPeriods(per); setCheckins(ch); setBiometrics(bio); setHotFlashes(hf);
+    setMeals(ml); setWorkouts(wo); setSupplements(sup); setRecords(rec);
+    setCycleWindows(win); setCycleStats(stats); setWhoopConnected(wc);
   }, []);
 
-  const setProfile = useCallback(async (p: UserProfile) => {
-    setProfileState(p);
-    setMeals([]); setCompleted([]); setStreak(0); setStepsState(0);
-    setNutritionLoading(true); setExerciseLoading(true);
-    try {
-      const phase = p.womensHealth?.lastPeriodDate
-        ? getCyclePhase(getCycleDay(p.womensHealth.lastPeriodDate), p.womensHealth.cycleLength)
-        : undefined;
-      const [goals, plan] = await Promise.all([
-        generateNutritionGoals(p),
-        generateExercisePlan({ age: p.age, weight: p.weight, height: p.height, goal: p.goal, equipment: p.equipment, workoutStyles: p.workoutStyles, cyclePhase: phase }),
-      ]);
-      setNutritionGoals(goals);
-      setExercisePlan(plan);
-    } catch (err) {
-      console.error("AI personalization failed:", err);
-    } finally {
-      setNutritionLoading(false); setExerciseLoading(false);
-    }
+  useEffect(() => {
+    (async () => { await reload(); setReady(true); })();
+  }, [reload]);
+
+  const completeOnboarding = useCallback(async (p: Omit<UserProfile, "id" | "createdAt">) => {
+    await profileRepo.save({ ...p, createdAt: new Date().toISOString() });
+    // Seed labeled sample data so the app has an immediate story (WHOOP optional).
+    await seedSampleData(p.healthMode);
+    await reload();
+  }, [reload]);
+
+  const addPeriod = useCallback(async (e: Omit<PeriodEntry, "id">) => { await periodsRepo.add(e); await reload(); }, [reload]);
+  const removePeriod = useCallback(async (id: number) => { await periodsRepo.remove(id); await reload(); }, [reload]);
+  const saveCheckin = useCallback(async (e: Omit<CycleCheckin, "id">) => { await checkinsRepo.upsert(e); await reload(); }, [reload]);
+  const logHotFlash = useCallback(async (e: Omit<HotFlashEvent, "id">) => { await hotFlashesRepo.add(e); await reload(); }, [reload]);
+  const addMeal = useCallback(async (m: Omit<Meal, "id">) => { await mealsRepo.add(m); await reload(); }, [reload]);
+  const addWorkout = useCallback(async (w: Omit<WorkoutLog, "id">) => { await workoutsRepo.add(w); await reload(); }, [reload]);
+  const toggleWorkout = useCallback(async (id: number, completed: boolean) => { await workoutsRepo.update(id, { completed }); await reload(); }, [reload]);
+  const addSupplement = useCallback(async (s: Omit<Supplement, "id">) => { await supplementsRepo.add(s); await reload(); }, [reload]);
+  const removeSupplement = useCallback(async (id: number) => { await supplementsRepo.remove(id); await reload(); }, [reload]);
+  const addRecord = useCallback(async (r: Omit<HealthRecord, "id">) => { await recordsRepo.add(r); await reload(); }, [reload]);
+  const removeRecord = useCallback(async (id: number) => { await recordsRepo.remove(id); await reload(); }, [reload]);
+
+  const connectWhoop = useCallback(async () => {
+    const { getWhoopAuthUrl } = await import("@/lib/whoop");
+    window.location.href = getWhoopAuthUrl();
   }, []);
 
-  const addMeal = useCallback((m: Meal) => {
-    setMeals((prev) => [...prev, m]);
-    setStreak((s) => s + (meals.length === 0 ? 1 : 0));
-  }, [meals.length]);
+  const resyncWhoop = useCallback(async () => {
+    await syncWhoopData();
+    await reload();
+  }, [reload]);
 
-  const setSteps = useCallback((s: number) => setStepsState(s), []);
-
-  const toggleExercise = useCallback((id: string) => {
-    setCompleted((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
-  }, []);
-
-  const addWeightEntry = useCallback((e: WeightEntry) => {
-    setWeightLog((prev) => [...prev, e]);
-  }, []);
-
-  const addWellnessEntry = useCallback((e: WellnessEntry) => {
-    setWellnessLog((prev) => [...prev, e]);
-  }, []);
-
-  const addCycleSymptomEntry = useCallback((e: CycleSymptomEntry) => {
-    setCycleSymptomLog((prev) => [...prev.filter((x) => x.date !== e.date), e]);
-  }, []);
-
-  const logPeriodStart = useCallback((date: string) => {
-    setPeriodLog((prev) => [...prev, { startDate: date }]);
-  }, []);
-
-  const addSupplement = useCallback((s: Supplement) => {
-    setSupplements((prev) => [...prev, s]);
-  }, []);
-
-  const removeSupplement = useCallback((id: string) => {
-    setSupplements((prev) => prev.filter((s) => s.id !== id));
-  }, []);
-
-  const refreshExercisePlan = useCallback(() => {
-    if (profile) fetchExercisePlan(profile);
-  }, [profile, fetchExercisePlan]);
-
-  const generateWeeklyPlan = useCallback(async (daysPerWeek: number) => {
-    if (!profile || exercisePlan.length === 0) return;
-    setWeeklyPlanLoading(true);
-    try {
-      const exercises: WorkoutExercise[] = [];
-      const workDays = new Set<number>();
-      const daysToAssign = Math.min(daysPerWeek, 7);
-      const dayGap = Math.max(1, Math.floor(7 / daysToAssign));
-      for (let i = 0; i < daysToAssign; i++) {
-        workDays.add((i * dayGap) % 7);
-      }
-      let exIdx = 0;
-      workDays.forEach((dayOfWeek) => {
-        for (let i = 0; i < 2 && exIdx < exercisePlan.length; i++, exIdx++) {
-          const ex = exercisePlan[exIdx];
-          exercises.push({
-            ...ex,
-            id: `${dayOfWeek}-${i}-${Date.now()}`,
-            dayOfWeek,
-            completed: false,
-          });
-        }
-      });
-      const phase = profile.womensHealth?.lastPeriodDate
-        ? getCyclePhase(getCycleDay(profile.womensHealth.lastPeriodDate), profile.womensHealth.cycleLength)
-        : undefined;
-      const plan: WeeklyWorkoutPlan = {
-        id: `plan-${Date.now()}`,
-        daysPerWeek,
-        exercises,
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-        cyclePhaseAtCreation: phase,
-      };
-      setWeeklyWorkoutPlanState(plan);
-    } catch (err) {
-      console.error("Weekly plan generation failed:", err);
-    } finally {
-      setWeeklyPlanLoading(false);
-    }
-  }, [profile, exercisePlan]);
-
-  const updateWeeklyPlan = useCallback((plan: WeeklyWorkoutPlan) => {
-    setWeeklyWorkoutPlanState(plan);
-  }, []);
-
-  const toggleExerciseCompletion = useCallback((exerciseId: string) => {
-    setWeeklyWorkoutPlanState((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        exercises: prev.exercises.map((ex) =>
-          ex.id === exerciseId ? { ...ex, completed: !ex.completed } : ex
-        ),
-        lastUpdated: new Date().toISOString(),
-      };
-    });
-  }, []);
-
-  const addCustomExerciseToDay = useCallback((dayOfWeek: number, exercise: WorkoutExercise) => {
-    setWeeklyWorkoutPlanState((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        exercises: [...prev.exercises, { ...exercise, dayOfWeek, id: `${dayOfWeek}-custom-${Date.now()}` }],
-        lastUpdated: new Date().toISOString(),
-      };
-    });
-  }, []);
-
-  const removeExerciseFromDay = useCallback((exerciseId: string) => {
-    setWeeklyWorkoutPlanState((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        exercises: prev.exercises.filter((ex) => ex.id !== exerciseId),
-        lastUpdated: new Date().toISOString(),
-      };
-    });
-  }, []);
-
-  const editExerciseInPlan = useCallback((exerciseId: string, updates: Partial<WorkoutExercise>) => {
-    setWeeklyWorkoutPlanState((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        exercises: prev.exercises.map((ex) =>
-          ex.id === exerciseId ? { ...ex, ...updates } : ex
-        ),
-        lastUpdated: new Date().toISOString(),
-      };
-    });
-  }, []);
+  // ── Derived cycle state ────────────────────────────────────
+  const cycleLength: number = profile?.cycleLength ?? CYCLE.DEFAULT_LENGTH;
+  const lastPeriod = periods.length ? periods[periods.length - 1].startDate : null;
+  const cycleDay = lastPeriod ? getCycleDay(lastPeriod, cycleLength) : null;
+  const cyclePhase = cycleDay ? getCyclePhase(cycleDay, cycleLength) : null;
+  const prediction = predictNextPeriod(periods, cycleStats, cycleLength);
+  const usingSample = !whoopConnected && biometrics.some((b) => b.source === "sample");
+  const todayMood = checkins.find((c) => c.date === todayISO())?.mood;
 
   return (
     <AppContext.Provider value={{
-      profile, nutritionGoals, nutritionLoading, exercisePlan, exerciseLoading,
-      weeklyWorkoutPlan, weeklyPlanLoading,
-      meals, steps, streak, weightLog, wellnessLog, cycleSymptomLog, periodLog,
-      supplements, completedExercises,
-      setProfile, addMeal, setSteps, toggleExercise, addWeightEntry,
-      addWellnessEntry, addCycleSymptomEntry, logPeriodStart,
-      addSupplement, removeSupplement, refreshExercisePlan,
-      generateWeeklyPlan, updateWeeklyPlan, toggleExerciseCompletion,
-      addCustomExerciseToDay, removeExerciseFromDay, editExerciseInPlan,
+      ready, profile, periods, checkins, biometrics, hotFlashes, meals, workouts,
+      supplements, records, cycleWindows, cycleStats, whoopConnected, usingSample,
+      cycleDay, cyclePhase, cycleLength, prediction, todayMood,
+      completeOnboarding, reload, addPeriod, removePeriod, saveCheckin, logHotFlash,
+      addMeal, addWorkout, toggleWorkout, addSupplement, removeSupplement,
+      addRecord, removeRecord, connectWhoop, resyncWhoop,
     }}>
       {children}
     </AppContext.Provider>
@@ -405,3 +154,14 @@ export function useApp() {
   if (!ctx) throw new Error("useApp must be used within AppProvider");
   return ctx;
 }
+
+// Re-export engine helpers + types for convenience
+export { getCycleDay, getCyclePhase, getNextPeriodDate, getOvulationEstimate } from "@/lib/cycleEngine";
+export { db };
+export type {
+  UserProfile, PeriodEntry, CycleCheckin, BiometricEntry, HotFlashEvent,
+  Meal, WorkoutLog, Supplement, HealthRecord, HealthMode, CyclePhase,
+  FitnessGoal, Equipment, WorkoutStyle, BiologicalSex, PmsSymptom,
+  MenopauseSymptom, HealthCondition, FlowLevel, PeriodPrediction,
+  SignalTrend, PatternFlag, Confidence,
+} from "@/db/types";

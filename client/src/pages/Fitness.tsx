@@ -1,302 +1,160 @@
 /**
- * NutriSense AI — Fitness Tab
- * Weekly workout planner with manual exercise entry, editable plans, and completion tracking.
- * Includes real-time step counter and dynamic goal adjustment.
+ * Glitch — Fitness
+ * Suggests exercises FIRST (by phase + level, with form figures), asks your
+ * level, then lets you log with RPE. Reflects YOUR own pattern across the cycle.
  */
-import { useState, useEffect } from "react";
-import { useApp, WeeklyWorkoutPlan, WorkoutExercise } from "@/contexts/AppContext";
-import { useStepCounter } from "@/hooks/useStepCounter";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Edit2, Check, ChevronDown, ChevronUp, Footprints, Smartphone, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useApp } from "@/contexts/AppContext";
+import { correlate } from "@/lib/cycleEngine";
+import { suggestExercises, Exercise } from "@/lib/exerciseLibrary";
+import { FITNESS_EVIDENCE } from "@/data/references";
+import type { FitnessLevel, WorkoutStyle } from "@/db/types";
+import PostureFigure from "@/components/PostureFigure";
+import PerlinField from "@/components/PerlinField";
+import { Dumbbell, Plus, ChevronRight } from "lucide-react";
 
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const card: React.CSSProperties = { background: "var(--luna-surface)", borderRadius: 20, padding: 18, boxShadow: "0 6px 20px oklch(0.2 0.02 50 / 0.07)" };
 
 export default function Fitness() {
-  const { profile, weeklyWorkoutPlan, weeklyPlanLoading, generateWeeklyPlan, toggleExerciseCompletion, editExerciseInPlan, removeExerciseFromDay, addCustomExerciseToDay, nutritionGoals, meals, setSteps, steps: contextSteps } = useApp();
-  const { steps, isActive, isSupported, start, stop, setManual } = useStepCounter(contextSteps);
+  const { profile, workouts, cycleDay, cyclePhase, addWorkout, reload } = useApp();
+  const mode = profile?.healthMode ?? "none";
+  const [level, setLevel] = useState<FitnessLevel>(profile?.fitnessLevel ?? "beginner");
+  const [levelSet, setLevelSet] = useState(!!profile?.fitnessLevel);
+  const [picked, setPicked] = useState<Exercise | null>(null);
+  const [rpe, setRpe] = useState(5);
 
-  const [daysPerWeek, setDaysPerWeek] = useState(5);
-  const [expandedDay, setExpandedDay] = useState<number | null>(0);
-  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<Partial<WorkoutExercise>>({});
-  const [addingToDay, setAddingToDay] = useState<number | null>(null);
-  const [newExercise, setNewExercise] = useState({ name: "", sets: "3", reps: "10", duration: "" });
+  const suggestion = useMemo(() => suggestExercises(cyclePhase, level, mode), [cyclePhase, level, mode]);
 
-  // Sync steps to context
-  useEffect(() => {
-    setSteps(steps);
-  }, [steps, setSteps]);
+  const insight = useMemo(() => {
+    if (mode === "none" || mode === "menopause") return null;
+    const withRpe = workouts.filter((w) => typeof w.perceivedEffort === "number" && typeof w.cycleDay === "number");
+    if (withRpe.length < 4) return null;
+    const r = correlate(withRpe.map((w) => w.cycleDay!), withRpe.map((w) => w.perceivedEffort!));
+    if (Math.abs(r) < 0.35) return "So far your effort levels look steady across your cycle.";
+    return r > 0
+      ? "Your sessions have tended to feel harder later in your cycle — that's your own pattern."
+      : "Your sessions have tended to feel easier later in your cycle — interesting, and uniquely yours.";
+  }, [workouts, mode]);
 
-  // Generate plan on first load
-  useEffect(() => {
-    if (!weeklyWorkoutPlan && !weeklyPlanLoading) {
-      generateWeeklyPlan(daysPerWeek);
-    }
-  }, []);
+  async function setLevelAndSave(l: FitnessLevel) {
+    setLevel(l); setLevelSet(true);
+    const { profileRepo } = await import("@/db/repositories");
+    await profileRepo.update({ fitnessLevel: l });
+    await reload();
+  }
 
-  const handleGeneratePlan = async () => {
-    await generateWeeklyPlan(daysPerWeek);
-    toast.success(`${daysPerWeek}-day workout plan generated! 💪`);
-  };
-
-  const handleEditExercise = (ex: WorkoutExercise) => {
-    setEditingExerciseId(ex.id);
-    setEditValues(ex);
-  };
-
-  const handleSaveEdit = () => {
-    if (editingExerciseId) {
-      editExerciseInPlan(editingExerciseId, editValues);
-      setEditingExerciseId(null);
-      toast.success("Exercise updated!");
-    }
-  };
-
-  const handleAddCustomExercise = (dayOfWeek: number) => {
-    if (!newExercise.name.trim()) {
-      toast.error("Please enter an exercise name");
-      return;
-    }
-    const custom: WorkoutExercise = {
-      id: `custom-${Date.now()}`,
-      name: newExercise.name,
-      description: `${newExercise.sets} sets × ${newExercise.reps} reps`,
-      sets: parseInt(newExercise.sets) || 3,
-      reps: parseInt(newExercise.reps) || 10,
-      duration: newExercise.duration ? `${newExercise.duration} min` : "30 min",
-      caloriesBurned: 0,
-      formCues: [],
-      dayOfWeek,
-      completed: false,
-      emoji: "💪",
-      detail: `${newExercise.sets} sets × ${newExercise.reps} reps`,
-      burn: 0,
-      rationale: "Custom exercise",
-      cues: [],
-      goodCue: "Focus on form over speed",
-    };
-    addCustomExerciseToDay(dayOfWeek, custom);
-    setNewExercise({ name: "", sets: "3", reps: "10", duration: "" });
-    setAddingToDay(null);
-    toast.success("Exercise added!");
-  };
-
-  const exercisesByDay = weeklyWorkoutPlan?.exercises.reduce((acc, ex) => {
-    if (!acc[ex.dayOfWeek]) acc[ex.dayOfWeek] = [];
-    acc[ex.dayOfWeek].push(ex);
-    return acc;
-  }, {} as Record<number, WorkoutExercise[]>) || {};
-
-  const completedCount = weeklyWorkoutPlan?.exercises.filter((ex) => ex.completed).length || 0;
-  const totalCount = weeklyWorkoutPlan?.exercises.length || 0;
-  const weeklyProgress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
-  const stepGoal = nutritionGoals?.stepGoal ?? 8000;
-  const totalCalories = meals.reduce((a, m) => a + m.calories, 0);
-  const dynamicStepGoal = nutritionGoals && totalCalories > nutritionGoals.calorieTarget ? stepGoal + Math.floor((totalCalories - nutritionGoals.calorieTarget) / 500) * 1000 : stepGoal;
-  const stepPct = Math.min((steps / dynamicStepGoal) * 100, 100);
-
-  const handleStartStepCounter = async () => {
-    if (!isSupported) {
-      toast.info("Step counter not supported on this device. Use manual entry below.");
-      return;
-    }
-    if (isActive) {
-      stop();
-      toast.info("Step counter paused.");
-    } else {
-      await start();
-      toast.success("Step counter started! Keep your phone in your pocket.");
-    }
-  };
+  async function logExercise(ex: Exercise) {
+    await addWorkout({
+      date: new Date().toISOString().split("T")[0], name: ex.name, type: (ex.focus === "strength" ? "weight_training" : ex.focus === "cardio" ? "running" : "yoga") as WorkoutStyle,
+      perceivedEffort: rpe, cycleDay: cycleDay ?? undefined, completed: true,
+    });
+    setPicked(null);
+    toast.success(`Logged ${ex.name} 💪`);
+  }
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Header */}
-      <div className="px-4 pt-6">
-        <h1 className="text-3xl font-bold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Your Fitness Plan
-        </h1>
-        <p className="text-sm text-muted-foreground">Build a personalized weekly workout routine</p>
+    <div className="luna-app" style={{ minHeight: "100%", position: "relative" }}>
+      <div style={{ position: "relative", padding: "24px 16px 10px", overflow: "hidden", minHeight: 140 }}>
+        <PerlinField tint="oklch(0.68 0.13 160)" tint2="oklch(0.66 0.13 300)" opacity={0.4} />
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "var(--luna-text)" }}>Move</h1>
+          {cyclePhase && mode !== "menopause" && <p style={{ fontSize: 13, color: "var(--luna-text-muted)" }}>You're in your <b style={{ color: "var(--luna-accent)" }}>{cyclePhase}</b> phase (day {cycleDay})</p>}
+        </div>
       </div>
 
-      {/* Step Counter */}
-      <div className="px-4">
-        <Card className="p-4 bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Footprints size={18} className="text-orange-600" />
-              <span className="text-sm font-semibold text-orange-700">Steps Today</span>
-              {isActive && <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-500 text-white animate-pulse">LIVE</span>}
-            </div>
-            <span className="text-2xl font-bold text-orange-700">{steps.toLocaleString()}</span>
+      <div style={{ padding: "6px 16px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Level selector (ask for input) */}
+        <div style={{ ...card }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--luna-text)", marginBottom: 4 }}>What's your level?</h2>
+          <p style={{ fontSize: 11, color: "var(--luna-text-muted)", marginBottom: 10 }}>Suggestions adapt to this. You can change it anytime.</p>
+          <div style={{ display: "flex", gap: 8 }}>
+            {(["beginner", "intermediate", "advanced"] as FitnessLevel[]).map((l) => (
+              <button key={l} onClick={() => setLevelAndSave(l)} style={{ flex: 1, padding: "10px", borderRadius: 12, fontSize: 12, fontWeight: 600, textTransform: "capitalize", border: level === l && levelSet ? "none" : "1.5px solid oklch(0.85 0.02 72)", background: level === l && levelSet ? "var(--luna-accent)" : "transparent", color: level === l && levelSet ? "white" : "var(--luna-text-muted)" }}>{l}</button>
+            ))}
           </div>
-          <div className="h-2 bg-orange-200 rounded-full overflow-hidden mb-2">
-            <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all duration-800" style={{ width: `${stepPct}%` }} />
-          </div>
-          <p className="text-xs text-orange-600 mb-3">Goal: {dynamicStepGoal.toLocaleString()} steps</p>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleStartStepCounter} className="flex-1" style={{ background: isActive ? "oklch(0.55 0.08 25)" : "oklch(0.62 0.12 38)" }}>
-              <Smartphone size={14} className="mr-1" />
-              {isActive ? "Pause" : "Start"}
-            </Button>
-            <Input type="number" placeholder="Manual" onBlur={(e) => { const n = parseInt(e.target.value); if (!isNaN(n) && n >= 0) { setManual(n); toast.success(`Steps set to ${n.toLocaleString()}`); e.target.value = ""; } }} className="w-20 text-xs" />
-          </div>
-        </Card>
-      </div>
+        </div>
 
-      {/* Weekly Progress */}
-      {weeklyWorkoutPlan && (
-        <div className="px-4">
-          <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Weekly Progress</p>
-                <p className="text-2xl font-bold text-purple-700 mt-1">{completedCount} / {totalCount} Workouts</p>
-              </div>
-              <div className="relative w-20 h-20">
-                <svg className="w-full h-full" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="oklch(0.88 0.020 72)" strokeWidth="8" />
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="oklch(0.68 0.09 25)" strokeWidth="8" strokeDasharray={`${(weeklyProgress / 100) * 283} 283`} strokeLinecap="round" style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%", transition: "stroke-dasharray 0.6s ease" }} />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-bold text-purple-700">{weeklyProgress}%</span>
+        {/* Phase-first suggestions */}
+        <div style={{ ...card }}>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700, color: "var(--luna-text)", marginBottom: 6 }}>Suggested for you today</h2>
+          <p style={{ fontSize: 12, color: "var(--luna-text-muted)", lineHeight: 1.5, marginBottom: 12 }}>{suggestion.intro}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {suggestion.recommended.map((ex, i) => (
+              <motion.button key={ex.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                onClick={() => setPicked(picked?.id === ex.id ? null : ex)}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: picked?.id === ex.id ? "color-mix(in oklch, var(--luna-accent) 12%, transparent)" : "var(--luna-bg)", border: picked?.id === ex.id ? "1.5px solid var(--luna-accent)" : "1.5px solid transparent", textAlign: "left" }}>
+                <span style={{ fontSize: 24 }}>{ex.emoji}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "var(--luna-text)" }}>{ex.name}</p>
+                  <p style={{ fontSize: 11, color: "var(--luna-text-muted)" }}>{ex.sets} · {ex.focus} · {ex.level}</p>
                 </div>
-              </div>
+                <ChevronRight size={18} color="var(--luna-text-muted)" style={{ transform: picked?.id === ex.id ? "rotate(90deg)" : "none", transition: "transform 0.2s" }} />
+              </motion.button>
+            ))}
+          </div>
+
+          {/* Expanded form guide */}
+          <AnimatePresence>
+            {picked && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                style={{ overflow: "hidden", marginTop: 12 }}>
+                <div style={{ display: "flex", gap: 14, padding: 14, borderRadius: 16, background: "var(--luna-bg)" }}>
+                  <PostureFigure points={picked.posture.points} label={picked.posture.label} size={130} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "var(--luna-text)", marginBottom: 6 }}>Form cues</p>
+                    {picked.cues.map((c, i) => (
+                      <p key={i} style={{ fontSize: 12, color: "var(--luna-text-muted)", lineHeight: 1.6 }}>✓ {c}</p>
+                    ))}
+                  </div>
+                </div>
+                {/* RPE + log */}
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: "var(--luna-text)" }}>How hard did it feel? (RPE)</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--luna-accent)" }}>{rpe}/10</span>
+                  </div>
+                  <input type="range" min={1} max={10} value={rpe} onChange={(e) => setRpe(Number(e.target.value))} style={{ width: "100%", accentColor: "var(--luna-accent)", marginBottom: 10 }} />
+                  <motion.button whileTap={{ scale: 0.97 }} onClick={() => logExercise(picked)}
+                    style={{ width: "100%", padding: 12, borderRadius: 12, background: "var(--luna-accent)", color: "white", fontWeight: 700, border: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <Plus size={16} /> Log this
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {insight && (
+          <div style={{ padding: 14, borderRadius: 16, background: `linear-gradient(135deg, var(--luna-accent), var(--luna-accent2))`, boxShadow: "0 8px 22px var(--luna-glow)" }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "oklch(1 0 0 / 0.9)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Your training pattern</p>
+            <p style={{ fontSize: 13, color: "white", lineHeight: 1.5 }}>{insight}</p>
+          </div>
+        )}
+
+        {/* History */}
+        {workouts.length > 0 && (
+          <div>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "var(--luna-text)", marginBottom: 10 }}>Recent</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {[...workouts].reverse().slice(0, 10).map((w) => (
+                <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", borderRadius: 14, background: "var(--luna-surface)" }}>
+                  <div><p style={{ fontSize: 13, fontWeight: 600, color: "var(--luna-text)" }}>{w.name}</p>
+                    <p style={{ fontSize: 11, color: "var(--luna-text-muted)" }}>RPE {w.perceivedEffort}/10{w.cycleDay ? ` · day ${w.cycleDay}` : ""} · {w.date}</p></div>
+                  <Dumbbell size={16} color="var(--luna-text-muted)" />
+                </div>
+              ))}
             </div>
-          </Card>
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* Days Per Week Selector */}
-      <div className="px-4 space-y-3">
-        <label className="text-sm font-semibold text-foreground">How many days per week?</label>
-        <div className="flex gap-2 flex-wrap">
-          {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-            <button key={n} onClick={() => setDaysPerWeek(n)} className="px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ background: daysPerWeek === n ? "oklch(0.62 0.12 38)" : "oklch(0.92 0.004 286.32)", color: daysPerWeek === n ? "white" : "oklch(0.55 0.020 60)" }}>
-              {n}
-            </button>
-          ))}
-        </div>
-        <Button onClick={handleGeneratePlan} disabled={weeklyPlanLoading} className="w-full" style={{ background: "oklch(0.62 0.12 38)" }}>
-          {weeklyPlanLoading ? <Loader2 size={16} className="mr-2 animate-spin" /> : null}
-          {weeklyPlanLoading ? "Generating..." : "Generate Weekly Plan"}
-        </Button>
+        {!FITNESS_EVIDENCE.PHASE_RULE_IS_PRESCRIPTIVE && (
+          <p style={{ fontSize: 10, color: "var(--luna-text-muted)", fontStyle: "italic", textAlign: "center", lineHeight: 1.5 }}>
+            The science on cycle phase and performance is mixed, so Glitch suggests and reflects your own pattern rather than prescribing when to train hard.
+          </p>
+        )}
       </div>
-
-      {/* Weekly Plan */}
-      {weeklyWorkoutPlan && (
-        <div className="px-4 space-y-3">
-          {DAYS.map((day, dayIdx) => {
-            const dayExercises = exercisesByDay[dayIdx] || [];
-            const dayCompleted = dayExercises.filter((ex) => ex.completed).length;
-            const isExpanded = expandedDay === dayIdx;
-
-            return (
-              <Card key={dayIdx} className="overflow-hidden border border-border">
-                <button onClick={() => setExpandedDay(isExpanded ? null : dayIdx)} className="w-full p-4 flex items-center justify-between hover:bg-secondary transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "oklch(0.62 0.12 38 / 0.10)" }}>
-                      <span className="text-sm font-bold text-orange-700">{dayIdx}</span>
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-foreground">{DAY_FULL[dayIdx]}</p>
-                      <p className="text-xs text-muted-foreground">{dayCompleted} of {dayExercises.length} done</p>
-                    </div>
-                  </div>
-                  {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
-
-                {isExpanded && (
-                  <div className="border-t border-border bg-card p-4 space-y-3">
-                    {dayExercises.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Rest day</p>
-                    ) : (
-                      dayExercises.map((ex) => (
-                        <div key={ex.id} className="border border-border rounded-lg p-3 bg-background">
-                          {editingExerciseId === ex.id ? (
-                            <div className="space-y-2">
-                              <Input value={editValues.name || ""} onChange={(e) => setEditValues({ ...editValues, name: e.target.value })} placeholder="Exercise name" className="text-sm" />
-                              <div className="grid grid-cols-3 gap-2">
-                                <Input type="number" value={editValues.sets || 3} onChange={(e) => setEditValues({ ...editValues, sets: parseInt(e.target.value) || 3 })} placeholder="Sets" className="text-sm" />
-                                <Input type="number" value={editValues.reps || 10} onChange={(e) => setEditValues({ ...editValues, reps: parseInt(e.target.value) || 10 })} placeholder="Reps" className="text-sm" />
-                                <Input value={editValues.duration || ""} onChange={(e) => setEditValues({ ...editValues, duration: e.target.value })} placeholder="Duration" className="text-sm" />
-                              </div>
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={handleSaveEdit} className="flex-1" style={{ background: "oklch(0.62 0.12 38)" }}>
-                                  Save
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => setEditingExerciseId(null)} className="flex-1">
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <button onClick={() => toggleExerciseCompletion(ex.id)} className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all" style={{ borderColor: ex.completed ? "oklch(0.62 0.12 38)" : "oklch(0.88 0.020 72)", background: ex.completed ? "oklch(0.62 0.12 38)" : "transparent" }}>
-                                    {ex.completed && <Check size={14} className="text-white" />}
-                                  </button>
-                                  <p className={`font-semibold ${ex.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{ex.name}</p>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 ml-8">
-                                  {ex.sets} sets × {ex.reps} reps · {ex.duration}
-                                </p>
-                              </div>
-                              <div className="flex gap-1">
-                                <button onClick={() => handleEditExercise(ex)} className="p-1.5 hover:bg-secondary rounded transition-colors">
-                                  <Edit2 size={14} className="text-muted-foreground" />
-                                </button>
-                                <button onClick={() => removeExerciseFromDay(ex.id)} className="p-1.5 hover:bg-destructive/10 rounded transition-colors">
-                                  <Trash2 size={14} className="text-destructive" />
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-
-                    {addingToDay === dayIdx ? (
-                      <div className="border border-dashed border-border rounded-lg p-3 space-y-2 bg-secondary/50">
-                        <Input value={newExercise.name} onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value })} placeholder="Exercise name" className="text-sm" />
-                        <div className="grid grid-cols-3 gap-2">
-                          <Input type="number" value={newExercise.sets} onChange={(e) => setNewExercise({ ...newExercise, sets: e.target.value })} placeholder="Sets" className="text-sm" />
-                          <Input type="number" value={newExercise.reps} onChange={(e) => setNewExercise({ ...newExercise, reps: e.target.value })} placeholder="Reps" className="text-sm" />
-                          <Input value={newExercise.duration} onChange={(e) => setNewExercise({ ...newExercise, duration: e.target.value })} placeholder="Min" className="text-sm" />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleAddCustomExercise(dayIdx)} className="flex-1" style={{ background: "oklch(0.62 0.12 38)" }}>
-                            Add
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => setAddingToDay(null)} className="flex-1">
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button onClick={() => setAddingToDay(dayIdx)} className="w-full py-2 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:bg-secondary transition-colors flex items-center justify-center gap-2">
-                        <Plus size={16} /> Add Exercise
-                      </button>
-                    )}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {!weeklyWorkoutPlan && !weeklyPlanLoading && (
-        <div className="px-4 py-12 text-center">
-          <p className="text-muted-foreground mb-4">No workout plan yet. Generate one to get started!</p>
-        </div>
-      )}
     </div>
   );
 }
