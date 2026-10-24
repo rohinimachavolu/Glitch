@@ -40,7 +40,7 @@ export default function LifeStagePanel() {
   return (
     <div className="flex flex-col gap-4 px-4 pt-3">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        style={{ ...card, background: "linear-gradient(150deg, oklch(0.62 0.12 38 / 0.14) 0%, oklch(0.99 0.010 78) 70%)" }}>
+        style={{ ...card, background: "linear-gradient(150deg, color-mix(in oklch, var(--accent) 14%, transparent) 0%, oklch(0.99 0.010 78) 70%)" }}>
         <div className="flex items-center gap-3">
           <span style={{ fontSize: 40 }}>{info.emoji}</span>
           <div>

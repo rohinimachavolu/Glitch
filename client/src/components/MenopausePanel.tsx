@@ -13,6 +13,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 import { useMenopauseInsights } from "@/hooks/useMenopauseInsights";
 import { MRS_ITEMS, MRS_OPTIONS, scoreMrs, type MenoStage } from "@/lib/menopause";
+import HotflashRiskCard from "./HotflashRiskCard";
 
 const INK = "oklch(0.25 0.025 50)";
 const MUTED = "oklch(0.55 0.020 60)";
@@ -112,6 +113,8 @@ export default function MenopausePanel() {
         </motion.button>
         <p style={{ fontSize: 10.5, color: MUTED, fontFamily: font, marginTop: 6 }}>One tap in the moment. Glitch matches flashes against your meals, stress and sleep to find your triggers.</p>
       </div>
+
+      <HotflashRiskCard hasLoggedFlashes={m.flashes.length > 0 && !m.demoFlashes} />
 
       {/* Warm nights */}
       <div style={card}>

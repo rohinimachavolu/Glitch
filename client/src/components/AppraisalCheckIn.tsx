@@ -7,17 +7,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { nanoid } from "nanoid";
 import { ChevronRight, Sparkles, ThumbsDown, ThumbsUp, X } from "lucide-react";
-import { useApp, getCycleDay, getCyclePhase, hasActiveCycle, AppraisalEntry } from "@/contexts/AppContext";
+import { useApp, getCycleDay, getCyclePhase, tracksOvulation, AppraisalEntry } from "@/contexts/AppContext";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 import {
   coach, type Appraisal, type AteFeeling, type BodyContext, type CheckInInput,
   type CoachingResult, type CravingType, type Strategy, type StrategyId, type StrategyStats, type Trigger,
 } from "@/lib/appraisal";
 import { phraseCoaching } from "@/lib/aiService";
+import { celebrate } from "./Fun";
 
 const INK = "oklch(0.25 0.025 50)";
 const MUTED = "oklch(0.55 0.020 60)";
-const ACCENT = "oklch(0.62 0.12 38)";
+const ACCENT = "var(--accent)";
 const SAGE = "oklch(0.62 0.10 148)";
 const CARD = "oklch(0.99 0.010 78)";
 const font = "'DM Sans', sans-serif";
@@ -64,7 +65,7 @@ export default function AppraisalCheckIn() {
 
   function bodyContext(): BodyContext {
     const wh = profile?.womensHealth;
-    const cycling = hasActiveCycle(profile) && wh && !wh.hormonalContraception;
+    const cycling = tracksOvulation(profile);
     const cycleDay = cycling ? getCycleDay(wh!.lastPeriodDate, wh!.cycleLength) : null;
     const lastMeal = meals.map((m) => m.loggedAt).filter(Boolean).sort().pop();
     return {
@@ -94,6 +95,7 @@ export default function AppraisalCheckIn() {
     setActive(r.primary);
     setRated(null);
     setStep(3);
+    if (!appraisalLog.some((e) => new Date(e.at).toDateString() === new Date().toDateString())) celebrate("Checked in. That's self-care 🫶");
     if (!r.safety) {
       setAiLoading(true);
       phraseCoaching({ stateLabel: r.stateLabel, insight: r.insight, strategyTitle: r.primary.title, note: input.note })
@@ -118,7 +120,7 @@ export default function AppraisalCheckIn() {
     return (
       <motion.button whileTap={{ scale: 0.98 }} onClick={() => setOpen(true)}
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 20, border: "none", textAlign: "left",
-          background: "linear-gradient(120deg, oklch(0.62 0.12 38 / 0.14), oklch(0.72 0.08 148 / 0.14))", boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.05)" }}>
+          background: "linear-gradient(120deg, color-mix(in oklch, var(--accent) 14%, transparent), oklch(0.72 0.08 148 / 0.14))", boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.05)" }}>
         <span style={{ fontSize: 28 }}>{last ? MOODS[last.input.mood - 1] : "🫶"}</span>
         <div className="flex-1">
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: INK }}>How are you, really?</p>
@@ -175,7 +177,7 @@ export default function AppraisalCheckIn() {
               <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {APPRAISALS.map(([id, emoji, label]) => (
                   <motion.button key={id} whileTap={{ scale: 0.96 }} onClick={() => set("appraisal", id)}
-                    style={{ padding: "12px 10px", borderRadius: 14, textAlign: "left", border: input.appraisal === id ? `2px solid ${ACCENT}` : "1.5px solid oklch(0.88 0.020 72)", background: input.appraisal === id ? "oklch(0.62 0.12 38 / 0.08)" : CARD }}>
+                    style={{ padding: "12px 10px", borderRadius: 14, textAlign: "left", border: input.appraisal === id ? `2px solid ${ACCENT}` : "1.5px solid oklch(0.88 0.020 72)", background: input.appraisal === id ? "color-mix(in oklch, var(--accent) 8%, transparent)" : CARD }}>
                     <span style={{ fontSize: 20 }}>{emoji}</span>
                     <p style={{ fontSize: 12.5, fontWeight: 600, color: INK, fontFamily: font, marginTop: 2 }}>{label}</p>
                   </motion.button>
@@ -204,7 +206,7 @@ export default function AppraisalCheckIn() {
             <button onClick={() => setStep(step - 1)} style={{ padding: "12px 16px", borderRadius: 14, border: "1.5px solid oklch(0.88 0.020 72)", background: CARD, color: INK, fontWeight: 600, fontSize: 14, fontFamily: font }}>Back</button>
           )}
           <motion.button whileTap={{ scale: 0.97 }} onClick={() => (step === 2 ? finish() : setStep(step + 1))}
-            style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: ACCENT, color: "white", fontWeight: 700, fontSize: 14, fontFamily: font, boxShadow: "0 6px 18px oklch(0.62 0.12 38 / 0.3)" }}>
+            style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: ACCENT, color: "white", fontWeight: 700, fontSize: 14, fontFamily: font, boxShadow: "0 6px 18px color-mix(in oklch, var(--accent) 30%, transparent)" }}>
             {step === 2 ? "Get my suggestion" : "Next"}
           </motion.button>
         </div>
@@ -252,7 +254,7 @@ function ResultView({ result, active, aiLine, aiLoading, rated, onSwap, onRate, 
 
       <AnimatePresence mode="wait">
         <motion.div key={active.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-          style={{ padding: 14, borderRadius: 16, border: `2px solid ${ACCENT}`, background: "oklch(0.62 0.12 38 / 0.05)" }}>
+          style={{ padding: 14, borderRadius: 16, border: `2px solid ${ACCENT}`, background: "color-mix(in oklch, var(--accent) 5%, transparent)" }}>
           <div className="flex items-center justify-between">
             <p style={{ fontSize: 11, fontWeight: 700, color: ACCENT, fontFamily: font, letterSpacing: 0.4 }}>TRY THIS · {active.minutes} MIN</p>
           </div>
@@ -312,7 +314,7 @@ function EmojiRow({ items, value, onChange }: { items: string[]; value: number; 
       {items.map((e, i) => (
         <motion.button key={i} whileTap={{ scale: 0.88 }} onClick={() => onChange(i + 1)} aria-pressed={value === i + 1}
           animate={{ scale: value === i + 1 ? 1.12 : 1 }}
-          style={{ flex: 1, padding: "10px 0", borderRadius: 14, fontSize: 24, border: value === i + 1 ? `2px solid ${ACCENT}` : "1.5px solid oklch(0.90 0.015 72)", background: value === i + 1 ? "oklch(0.62 0.12 38 / 0.08)" : CARD }}>
+          style={{ flex: 1, padding: "10px 0", borderRadius: 14, fontSize: 24, border: value === i + 1 ? `2px solid ${ACCENT}` : "1.5px solid oklch(0.90 0.015 72)", background: value === i + 1 ? "color-mix(in oklch, var(--accent) 8%, transparent)" : CARD }}>
           {e}
         </motion.button>
       ))}

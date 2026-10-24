@@ -114,7 +114,7 @@ export default function WellnessCheckIn() {
 
     if (riskScore <= 4)  return { label: "Low", color: "oklch(0.72 0.08 148)", tip: "Great balance — cortisol looks healthy." };
     if (riskScore <= 8)  return { label: "Moderate", color: "oklch(0.78 0.10 75)", tip: "Some stress signals — try a 10-min walk or deep breathing." };
-    return { label: "Elevated", color: "oklch(0.62 0.12 38)", tip: "High stress + poor sleep + sugar cravings can spike cortisol. Prioritize rest and low-GI meals today." };
+    return { label: "Elevated", color: "var(--accent)", tip: "High stress + poor sleep + sugar cravings can spike cortisol. Prioritize rest and low-GI meals today." };
   }
 
   return (
@@ -141,7 +141,7 @@ export default function WellnessCheckIn() {
             style={{
               padding: "7px 14px",
               borderRadius: 10,
-              background: open ? "oklch(0.93 0.018 75)" : "oklch(0.62 0.12 38)",
+              background: open ? "oklch(0.93 0.018 75)" : "var(--accent)",
               color: open ? "oklch(0.35 0.025 50)" : "white",
               fontSize: 12,
               fontWeight: 600,
@@ -198,7 +198,7 @@ export default function WellnessCheckIn() {
                 {todayEntry.cravings.map((c) => {
                   const opt = CRAVING_OPTIONS.find((o) => o.id === c);
                   return (
-                    <span key={c} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "oklch(0.62 0.12 38 / 0.10)", color: "oklch(0.50 0.10 38)", fontFamily: "'DM Sans', sans-serif" }}>
+                    <span key={c} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 10%, transparent)", color: "oklch(0.50 0.10 38)", fontFamily: "'DM Sans', sans-serif" }}>
                       {opt?.emoji} {opt?.label}
                     </span>
                   );
@@ -214,7 +214,7 @@ export default function WellnessCheckIn() {
         <div className="flex flex-col gap-4 mt-2 animate-fade-up">
           <ScaleSelector label="Mood"   value={mood}   onChange={setMood}   labels={MOOD_LABELS}   color="oklch(0.72 0.08 148)" />
           <ScaleSelector label="Energy" value={energy} onChange={setEnergy} labels={ENERGY_LABELS} color="oklch(0.78 0.10 75)" />
-          <ScaleSelector label="Stress" value={stress} onChange={setStress} labels={STRESS_LABELS} color="oklch(0.62 0.12 38)" />
+          <ScaleSelector label="Stress" value={stress} onChange={setStress} labels={STRESS_LABELS} color="var(--accent)" />
 
           <div className="flex flex-col gap-1">
             <label style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
@@ -242,7 +242,7 @@ export default function WellnessCheckIn() {
                     padding: "6px 12px",
                     borderRadius: 999,
                     border: cravings.includes(id) ? "none" : "1.5px solid oklch(0.88 0.020 72)",
-                    background: cravings.includes(id) ? "oklch(0.62 0.12 38)" : "oklch(0.99 0.010 78)",
+                    background: cravings.includes(id) ? "var(--accent)" : "oklch(0.99 0.010 78)",
                     color: cravings.includes(id) ? "white" : "oklch(0.45 0.025 50)",
                     fontSize: 12,
                     fontFamily: "'DM Sans', sans-serif",
@@ -273,13 +273,13 @@ export default function WellnessCheckIn() {
             style={{
               padding: "13px",
               borderRadius: 14,
-              background: "oklch(0.62 0.12 38)",
+              background: "var(--accent)",
               color: "white",
               fontWeight: 700,
               fontSize: 15,
               fontFamily: "'DM Sans', sans-serif",
               border: "none",
-              boxShadow: "0 4px 14px oklch(0.62 0.12 38 / 0.30)",
+              boxShadow: "0 4px 14px color-mix(in oklch, var(--accent) 30%, transparent)",
             }}
           >
             Save Check-In

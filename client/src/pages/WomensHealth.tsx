@@ -17,7 +17,7 @@ import LifeStagePanel from "@/components/LifeStagePanel";
 import MenopausePanel from "@/components/MenopausePanel";
 
 const PHASE_INFO: Record<CyclePhase, { label: string; color: string; bg: string; emoji: string; desc: string }> = {
-  menstrual:  { label: "Menstrual",  color: "oklch(0.62 0.12 38)",  bg: "oklch(0.62 0.12 38 / 0.12)",  emoji: "🌑", desc: "Rest, restore, and be gentle with yourself." },
+  menstrual:  { label: "Menstrual",  color: "var(--accent)",  bg: "color-mix(in oklch, var(--accent) 12%, transparent)",  emoji: "🌑", desc: "Rest, restore, and be gentle with yourself." },
   follicular: { label: "Follicular", color: "oklch(0.72 0.08 148)", bg: "oklch(0.72 0.08 148 / 0.12)", emoji: "🌱", desc: "Energy is rising — great time to start new goals." },
   ovulation:  { label: "Ovulation",  color: "oklch(0.78 0.10 75)",  bg: "oklch(0.78 0.10 75 / 0.12)",  emoji: "🌕", desc: "Peak energy and strength — push your limits!" },
   luteal:     { label: "Luteal",     color: "oklch(0.68 0.09 25)",  bg: "oklch(0.68 0.09 25 / 0.12)",  emoji: "🌖", desc: "Wind down, prioritize rest and stable blood sugar." },
@@ -39,7 +39,7 @@ const FITNESS_GUIDANCE: Record<CyclePhase, { types: string[]; tip: string }> = {
 
 const SYMPTOM_LABELS = ["Mood", "Energy", "Stress", "Bloating", "Cramps", "Cravings", "Sleep Quality"];
 const SYMPTOM_KEYS: (keyof Omit<CycleSymptomEntry, "date" | "cycleDay" | "notes">)[] = ["mood", "energy", "stress", "bloating", "cramps", "cravings", "sleepQuality"];
-const SYMPTOM_COLORS = ["oklch(0.72 0.08 148)", "oklch(0.78 0.10 75)", "oklch(0.62 0.12 38)", "oklch(0.62 0.10 200)", "oklch(0.68 0.09 25)", "oklch(0.75 0.12 55)", "oklch(0.65 0.08 280)"];
+const SYMPTOM_COLORS = ["oklch(0.72 0.08 148)", "oklch(0.78 0.10 75)", "var(--accent)", "oklch(0.62 0.10 200)", "oklch(0.68 0.09 25)", "oklch(0.75 0.12 55)", "oklch(0.65 0.08 280)"];
 
 // ── Cycle Ring ────────────────────────────────────────────────
 function CycleRing({ day, total, phase }: { day: number; total: number; phase: CyclePhase }) {
@@ -105,11 +105,11 @@ function PeriodCalendar({ lastPeriodDate, cycleLength }: { lastPeriodDate: strin
   }
 
   const dayColors: Record<string, string> = {
-    period:    "oklch(0.62 0.12 38)",
+    period:    "var(--accent)",
     fertile:   "oklch(0.72 0.08 148)",
     ovulation: "oklch(0.78 0.10 75)",
     predicted: "oklch(0.68 0.09 25)",
-    today:     "oklch(0.62 0.12 38 / 0.25)",
+    today:     "color-mix(in oklch, var(--accent) 25%, transparent)",
   };
 
   return (
@@ -131,7 +131,7 @@ function PeriodCalendar({ lastPeriodDate, cycleLength }: { lastPeriodDate: strin
           const bg = type ? dayColors[type] : "transparent";
           const isToday = new Date(year, month, d).toDateString() === today.toDateString();
           return (
-            <div key={d} style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: bg, border: isToday && !type ? "1.5px solid oklch(0.62 0.12 38)" : "none" }}>
+            <div key={d} style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: bg, border: isToday && !type ? "1.5px solid var(--accent)" : "none" }}>
               <span style={{ fontSize: 11, fontWeight: type ? 700 : 400, color: type && type !== "today" ? "white" : "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{d}</span>
             </div>
           );
@@ -180,7 +180,7 @@ function getStressRecovery(entry: CycleSymptomEntry, completedCount: number): { 
   const pct = Math.min(100, Math.round((score / 18) * 100));
   if (pct >= 70) return { label: "Low Stress Pattern",      color: "oklch(0.72 0.08 148)", tip: "Your wellness indicators have remained stable. Keep it up!", score: pct };
   if (pct >= 45) return { label: "Moderate Stress Pattern", color: "oklch(0.78 0.10 75)",  tip: "Recent sleep and stress patterns suggest increased recovery needs.", score: pct };
-  return              { label: "Elevated Stress Pattern",   color: "oklch(0.62 0.12 38)",  tip: "Your body may need extra rest and nourishment today. Be kind to yourself.", score: pct };
+  return              { label: "Elevated Stress Pattern",   color: "var(--accent)",  tip: "Your body may need extra rest and nourishment today. Be kind to yourself.", score: pct };
 }
 
 // ── Main Page ─────────────────────────────────────────────────
@@ -297,7 +297,7 @@ export default function WomensHealth() {
       <div className="flex gap-1 px-4 py-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
         {TABS.map(({ id, label, emoji }) => (
           <button key={id} onClick={() => setActiveSection(id as typeof activeSection)}
-            style={{ padding: "7px 14px", borderRadius: 999, border: "none", whiteSpace: "nowrap", flexShrink: 0, background: activeSection === id ? "oklch(0.62 0.12 38)" : "oklch(0.93 0.018 75)", color: activeSection === id ? "white" : "oklch(0.45 0.025 50)", fontSize: 12, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
+            style={{ padding: "7px 14px", borderRadius: 999, border: "none", whiteSpace: "nowrap", flexShrink: 0, background: activeSection === id ? "var(--accent)" : "oklch(0.93 0.018 75)", color: activeSection === id ? "white" : "oklch(0.45 0.025 50)", fontSize: 12, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
             {emoji} {label}
           </button>
         ))}
@@ -413,7 +413,7 @@ export default function WomensHealth() {
                     <p style={{ fontSize: 12, color: "oklch(0.40 0.06 148)", fontFamily: "'DM Sans', sans-serif", fontStyle: "italic" }}>✨ {aiInsight}</p>
                   </div>
                 )}
-                {insightLoading && <Loader2 size={18} style={{ color: "oklch(0.62 0.12 38)", animation: "spin 1s linear infinite", margin: "12px auto 0" }} />}
+                {insightLoading && <Loader2 size={18} style={{ color: "var(--accent)", animation: "spin 1s linear infinite", margin: "12px auto 0" }} />}
                 {/* Stress recovery */}
                 {(todayEntry || checkedIn) && (() => {
                   const entry = todayEntry ?? { ...symptoms, date: todayStr, cycleDay, notes };
@@ -441,7 +441,7 @@ export default function WomensHealth() {
                       style={{ padding: "9px 12px", borderRadius: 10, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.97 0.015 75)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "oklch(0.25 0.025 50)", outline: "none", resize: "none", width: "100%" }} />
                   </div>
                   <button onClick={handleCheckin}
-                    style={{ padding: "13px", borderRadius: 14, background: "oklch(0.62 0.12 38)", color: "white", fontWeight: 700, fontSize: 15, fontFamily: "'DM Sans', sans-serif", border: "none", boxShadow: "0 4px 14px oklch(0.62 0.12 38 / 0.30)" }}>
+                    style={{ padding: "13px", borderRadius: 14, background: "var(--accent)", color: "white", fontWeight: 700, fontSize: 15, fontFamily: "'DM Sans', sans-serif", border: "none", boxShadow: "0 4px 14px color-mix(in oklch, var(--accent) 30%, transparent)" }}>
                     Save Check-In 🌸
                   </button>
                 </div>
@@ -513,7 +513,7 @@ export default function WomensHealth() {
                 {[
                   { key: "mood",     label: "Mood by Cycle Day",    color: "oklch(0.72 0.08 148)" },
                   { key: "energy",   label: "Energy by Cycle Day",  color: "oklch(0.78 0.10 75)" },
-                  { key: "cravings", label: "Cravings by Cycle Day",color: "oklch(0.62 0.12 38)" },
+                  { key: "cravings", label: "Cravings by Cycle Day",color: "var(--accent)" },
                   { key: "sleep",    label: "Sleep Quality",        color: "oklch(0.65 0.08 280)" },
                 ].map(({ key, label, color }) => (
                   <div key={key} style={{ background: "oklch(0.99 0.010 78)", borderRadius: 20, padding: "16px", boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" }}>

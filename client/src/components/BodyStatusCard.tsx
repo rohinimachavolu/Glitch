@@ -73,7 +73,7 @@ export default function BodyStatusCard() {
             <div className="flex items-center gap-2 flex-wrap">
               <p style={{ fontSize: 12, fontWeight: 700, color: MUTED, fontFamily: font, letterSpacing: 0.4 }}>RECOVERY</p>
               {rec.phase && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "oklch(0.62 0.12 38 / 0.12)", color: "oklch(0.52 0.12 38)", fontFamily: font, textTransform: "capitalize" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 12%, transparent)", color: "oklch(0.52 0.12 38)", fontFamily: font, textTransform: "capitalize" }}>
                   {rec.phase} phase
                 </span>
               )}

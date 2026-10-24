@@ -1,0 +1,93 @@
+{
+  "name": "Educational hot-flash risk indicator",
+  "trainedOn": "TSHS Hot Flashes dataset (Freeman et al., 2001 baseline), n=375 women aged 35-48",
+  "citation": "Grau L, Okungu X, Sammel MD. \"Hot Flashes Dataset\", TSHS Resources Portal (2023). https://www.causeweb.org/tshs/hot-flashes/",
+  "license": "CC BY-NC-SA 4.0 (educational use)",
+  "outcome": "Self-reported hot flashes in the past month",
+  "prevalence": 0.315,
+  "excludedFeatures": [
+    "race",
+    "education"
+  ],
+  "caveat": "Educational indicator from a small 2001 cohort of late-reproductive-age women; not a validated prediction for any individual.",
+  "base": {
+    "features": [
+      "age_group",
+      "smoker",
+      "bmi30",
+      "prior_symptoms"
+    ],
+    "intercept": -0.93387,
+    "coefficients": {
+      "age_group": 0.0134,
+      "smoker": 0.17308,
+      "bmi30": 0.23144,
+      "prior_symptoms": 0.85201
+    },
+    "mean": {
+      "age_group": 1.85333,
+      "smoker": 0.368,
+      "bmi30": 0.37067,
+      "prior_symptoms": 0.41867
+    },
+    "scale": {
+      "age_group": 0.73563,
+      "smoker": 0.48226,
+      "bmi30": 0.48298,
+      "prior_symptoms": 0.49334
+    },
+    "oddsRatioPerUnit": {
+      "age_group": 1.02,
+      "smoker": 1.43,
+      "bmi30": 1.61,
+      "prior_symptoms": 5.62
+    },
+    "cvAuc": 0.735,
+    "cvAucSd": 0.051
+  },
+  "withLabs": {
+    "features": [
+      "age_group",
+      "smoker",
+      "bmi30",
+      "prior_symptoms",
+      "log_fsh",
+      "log_estradiol"
+    ],
+    "intercept": -0.9642,
+    "coefficients": {
+      "age_group": -0.09803,
+      "smoker": 0.11186,
+      "bmi30": 0.2732,
+      "prior_symptoms": 0.8362,
+      "log_fsh": 0.43353,
+      "log_estradiol": 0.03498
+    },
+    "mean": {
+      "age_group": 1.85333,
+      "smoker": 0.368,
+      "bmi30": 0.37067,
+      "prior_symptoms": 0.41867,
+      "log_fsh": 1.98598,
+      "log_estradiol": 3.5752
+    },
+    "scale": {
+      "age_group": 0.73563,
+      "smoker": 0.48226,
+      "bmi30": 0.48298,
+      "prior_symptoms": 0.49334,
+      "log_fsh": 0.42281,
+      "log_estradiol": 0.64919
+    },
+    "oddsRatioPerUnit": {
+      "age_group": 0.88,
+      "smoker": 1.26,
+      "bmi30": 1.76,
+      "prior_symptoms": 5.45,
+      "log_fsh": 2.79,
+      "log_estradiol": 1.06
+    },
+    "cvAuc": 0.753,
+    "cvAucSd": 0.054
+  }
+}

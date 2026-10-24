@@ -11,6 +11,7 @@ import React, {
   ReactNode,
 } from "react";
 import { LIFE_STAGES, type NoCycleReason } from "@/lib/lifeStage";
+import { ovulationTrackingAllowed, type HormoneContext } from "@/lib/hormones";
 import type { WhoopData } from "@/lib/whoop/types";
 import { generateDemoWhoop } from "@/lib/whoop/demoData";
 import { dataStore, downloadJson } from "@/lib/dataStore";
@@ -75,8 +76,14 @@ export interface WomensHealthProfile {
   /** Why there's no current cycle (only when cycleStatus is "no") */
   noCycleReason?: NoCycleReason;
   dueDate?: string;             // when pregnant
-  /** Pill/implant/hormonal IUD usually suppress ovulation, so temperature detection is skipped */
+  /** Legacy flag (older saved profiles); superseded by `hormones` */
   hormonalContraception?: boolean;
+  /** Contraception / fertility / hormone therapy — only stored with consent */
+  hormones?: HormoneContext;
+  /** Menopause risk-factor inputs (hot-flash model) */
+  smoker?: boolean;
+  priorMenoSymptoms?: boolean;
+  labs?: { fsh?: number; estradiol?: number };
 }
 
 export interface UserProfile {
@@ -104,6 +111,7 @@ export interface Meal {
   omega3: number;
   time: string;
   loggedAt?: string;    // ISO timestamp (used for "hours since last meal")
+  sugar?: number;       // grams, when known (chat estimates it)
 }
 
 export interface WeightEntry {
@@ -173,6 +181,11 @@ export function getCycleDay(lastPeriodDate: string, cycleLength = 28, today = ne
   return Math.max(1, (diff % cycleLength) + 1);
 }
 
+/** True when temperature-based ovulation detection makes sense (cycling, and no ovulation-suppressing hormones). */
+export function tracksOvulation(p: UserProfile | null): boolean {
+  return hasActiveCycle(p) && ovulationTrackingAllowed(p!.womensHealth!.hormones, p!.womensHealth!.hormonalContraception);
+}
+
 /** True when the profile has an active menstrual cycle we can track. */
 export function hasActiveCycle(p: UserProfile | null): boolean {
   const wh = p?.womensHealth;
@@ -225,6 +238,7 @@ export interface AppState {
   mealHistory: Meal[];
   hotFlashLog: HotFlash[];
   mrsLog: MrsResult[];
+  supplementTaken: { supplementId: string; at: string }[];
 }
 
 interface AppContextType extends AppState {
@@ -263,6 +277,8 @@ interface AppContextType extends AppState {
   removeHotFlash: (id: string) => void;
   addMrs: (r: MrsResult) => void;
   updateWomensHealth: (patch: Partial<WomensHealthProfile>) => void;
+  markSupplementTaken: (supplementId: string) => void;
+  undoSupplementTaken: (supplementId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -291,6 +307,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [mealHistory, setMealHistory] = useState<Meal[]>([]);
   const [hotFlashLog, setHotFlashLog] = useState<HotFlash[]>([]);
   const [mrsLog, setMrsLog] = useState<MrsResult[]>([]);
+  const [supplementTaken, setSupplementTaken] = useState<{ supplementId: string; at: string }[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   const fetchExercisePlan = useCallback(async (p: UserProfile) => {
@@ -503,6 +520,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setChatMessages(snap.chatMessages ?? []);
         setHotFlashLog(snap.hotFlashLog ?? []);
         setMrsLog(snap.mrsLog ?? []);
+        // Keep ~2 weeks of supplement history
+        setSupplementTaken((snap.supplementTaken ?? []).filter((t) => Date.now() - Date.parse(t.at) < 14 * 86_400_000));
         // Demo data is regenerated rather than stored — it's deterministic and large
         if (snap.whoop?.source === "demo") setWhoop(buildDemo(snap.profile));
         else if (snap.whoop) setWhoop(snap.whoop as WhoopData);
@@ -518,7 +537,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     saveTimer.current = setTimeout(() => {
       const snap: Snapshot = {
         profile, nutritionGoals, exercisePlan, weeklyWorkoutPlan, meals, steps, streak, weightLog,
-        wellnessLog, cycleSymptomLog, periodLog, supplements, completedExercises, appraisalLog, screenerLog, mealHistory, hotFlashLog, mrsLog,
+        wellnessLog, cycleSymptomLog, periodLog, supplements, completedExercises, appraisalLog, screenerLog, mealHistory, hotFlashLog, mrsLog, supplementTaken,
         chatMessages: chatMessages.slice(-60),
         savedOn: localDay(new Date()),
         whoop: whoop?.source === "demo" ? { source: "demo" } : whoop,
@@ -526,7 +545,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dataStore.save(snap);
     }, 400);
   }, [hydrated, profile, nutritionGoals, exercisePlan, weeklyWorkoutPlan, meals, steps, streak, weightLog,
-      wellnessLog, cycleSymptomLog, periodLog, supplements, completedExercises, appraisalLog, screenerLog, chatMessages, mealHistory, hotFlashLog, mrsLog, whoop]);
+      wellnessLog, cycleSymptomLog, periodLog, supplements, completedExercises, appraisalLog, screenerLog, chatMessages, mealHistory, hotFlashLog, mrsLog, supplementTaken, whoop]);
 
   // ── WHOOP ──────────────────────────────────────────────────
   const connectWhoopDemo = useCallback(() => {
@@ -568,6 +587,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addHotFlash = useCallback((f: HotFlash) => setHotFlashLog((prev) => [...prev, f]), []);
   const removeHotFlash = useCallback((id: string) => setHotFlashLog((prev) => prev.filter((f) => f.id !== id)), []);
   const addMrs = useCallback((r: MrsResult) => setMrsLog((prev) => [...prev.filter((x) => x.date !== r.date), r]), []);
+  const markSupplementTaken = useCallback((supplementId: string) => setSupplementTaken((prev) => [...prev, { supplementId, at: new Date().toISOString() }]), []);
+  const undoSupplementTaken = useCallback((supplementId: string) => {
+    setSupplementTaken((prev) => {
+      const idx = prev.map((t) => t.supplementId).lastIndexOf(supplementId);
+      return idx < 0 ? prev : prev.filter((_, i) => i !== idx);
+    });
+  }, []);
   const updateWomensHealth = useCallback((patch: Partial<WomensHealthProfile>) => {
     setProfileState((prev) => (prev?.womensHealth ? { ...prev, womensHealth: { ...prev.womensHealth, ...patch } } : prev));
   }, []);
@@ -582,6 +608,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       appraisalLog, addAppraisal, rateAppraisal, screenerLog, addScreener,
       chatMessages, addChatMessage, updateChatMessage, clearChat, removeMeal, mealHistory,
       hotFlashLog, addHotFlash, removeHotFlash, mrsLog, addMrs, updateWomensHealth,
+      supplementTaken, markSupplementTaken, undoSupplementTaken,
       setProfile, addMeal, setSteps, toggleExercise, addWeightEntry,
       addWellnessEntry, addCycleSymptomEntry, logPeriodStart,
       addSupplement, removeSupplement, refreshExercisePlan,
@@ -597,6 +624,11 @@ function localDay(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+export function allowsDeficit(p: UserProfile | null): boolean {
+  if (!p) return true;
+  return lifeStageFor(p)?.allowCalorieDeficit !== false;
+}
+
 function lifeStageFor(p: UserProfile) {
   const reason = p.womensHealth?.cycleStatus === "no" ? p.womensHealth.noCycleReason : undefined;
   if (reason) return LIFE_STAGES[reason];
@@ -607,7 +639,7 @@ function lifeStageFor(p: UserProfile) {
 
 function buildDemo(p: UserProfile): WhoopData {
   const wh = p.womensHealth;
-  const cycling = hasActiveCycle(p) && !wh!.hormonalContraception;
+  const cycling = tracksOvulation(p);
   const menopausal = wh?.cycleStatus === "no" && (wh.noCycleReason === "perimenopause" || wh.noCycleReason === "menopause");
   return generateDemoWhoop({
     menopausal,

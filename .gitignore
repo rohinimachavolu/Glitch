@@ -114,3 +114,7 @@ client/public/__manus__/version.json
 
 # Manus debug logs
 .manus-logs/
+
+# Third-party datasets (download via scripts; never commit raw data)
+scripts/data/
+.venv/

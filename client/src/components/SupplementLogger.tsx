@@ -1,11 +1,12 @@
 /**
- * NutriSense AI — Supplement Logger
- * Add, view, and remove daily supplements.
+ * Glitch — Supplement Logger
+ * Add supplements, mark them taken, and get timing/interaction guidance (lib/supplementRules.ts).
  * Design: Organic Wellness Journal
  */
 import { useState } from "react";
 import { useApp, Supplement } from "@/contexts/AppContext";
-import { Plus, X, Pill } from "lucide-react";
+import { Plus, X, Pill, Check } from "lucide-react";
+import { checkTaking, scheduleIssues, FOOD_RULES, kindOf } from "@/lib/supplementRules";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 
@@ -25,7 +26,17 @@ const COMMON_SUPPLEMENTS = [
 const TIME_OPTIONS = ["Morning", "Afternoon", "Evening", "With Meal", "Before Workout", "After Workout"];
 
 export default function SupplementLogger() {
-  const { supplements, addSupplement, removeSupplement } = useApp();
+  const { supplements, addSupplement, removeSupplement, supplementTaken, markSupplementTaken, undoSupplementTaken, meals } = useApp();
+  const issues = scheduleIssues(supplements);
+  const takenToday = (id: string) => supplementTaken.some((t) => t.supplementId === id && new Date(t.at).toDateString() === new Date().toDateString());
+
+  function take(s: Supplement) {
+    if (takenToday(s.id)) { undoSupplementTaken(s.id); return; }
+    const check = checkTaking(s, new Date(), supplements, supplementTaken, meals);
+    markSupplementTaken(s.id);
+    if (check.ok) toast.success(`${s.emoji} ${s.name} taken ✓`);
+    else toast.warning(`${s.name} logged. Heads-up: ${check.warnings[0]}`, { duration: 7000 });
+  }
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [dose, setDose] = useState("");
@@ -59,7 +70,7 @@ export default function SupplementLogger() {
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Pill size={16} style={{ color: "oklch(0.62 0.12 38)" }} />
+          <Pill size={16} style={{ color: "var(--accent)" }} />
           <p style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
             Supplements
           </p>
@@ -69,7 +80,7 @@ export default function SupplementLogger() {
           style={{
             display: "flex", alignItems: "center", gap: 4,
             padding: "6px 12px", borderRadius: 10,
-            background: open ? "oklch(0.93 0.018 75)" : "oklch(0.62 0.12 38)",
+            background: open ? "oklch(0.93 0.018 75)" : "var(--accent)",
             color: open ? "oklch(0.35 0.025 50)" : "white",
             fontSize: 12, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", border: "none",
             transition: "all 0.15s",
@@ -85,6 +96,13 @@ export default function SupplementLogger() {
           No supplements logged yet. Tap Add to get started.
         </p>
       )}
+
+      {issues.map((i) => (
+        <div key={i.ids.join()} style={{ padding: "9px 11px", borderRadius: 12, background: "oklch(0.78 0.12 75 / 0.15)", border: "1px solid oklch(0.78 0.12 75 / 0.4)", marginBottom: 8 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "oklch(0.40 0.08 70)", fontFamily: "'DM Sans', sans-serif" }}>⏱️ Timing clash</p>
+          <p style={{ fontSize: 11.5, color: "oklch(0.30 0.03 60)", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.45 }}>{i.message} {i.fix}</p>
+        </div>
+      ))}
 
       {supplements.length > 0 && (
         <div className="flex flex-col gap-2 mb-3">
@@ -103,14 +121,23 @@ export default function SupplementLogger() {
                   <p style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
                     {s.dose} · {s.time}
                   </p>
+                  {FOOD_RULES[kindOf(s.name)] && (
+                    <p style={{ fontSize: 10.5, color: "oklch(0.50 0.03 60)", fontFamily: "'DM Sans', sans-serif", marginTop: 2, lineHeight: 1.4 }}>💡 {FOOD_RULES[kindOf(s.name)]!.tip}</p>
+                  )}
                 </div>
               </div>
+              <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+              <button onClick={() => take(s)} aria-pressed={takenToday(s.id)} aria-label={takenToday(s.id) ? `Undo ${s.name}` : `Mark ${s.name} taken`}
+                style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", borderRadius: 999, border: "none", fontSize: 11.5, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", background: takenToday(s.id) ? "oklch(0.62 0.10 148)" : "white", color: takenToday(s.id) ? "white" : "oklch(0.35 0.025 50)" }}>
+                {takenToday(s.id) ? <><Check size={12} /> Taken</> : "Take"}
+              </button>
               <button
                 onClick={() => removeSupplement(s.id)}
                 style={{ background: "none", border: "none", padding: 4, color: "oklch(0.65 0.015 60)", cursor: "pointer" }}
               >
                 <X size={14} />
               </button>
+              </div>
             </div>
           ))}
         </div>
@@ -184,7 +211,7 @@ export default function SupplementLogger() {
             disabled={!name.trim()}
             style={{
               padding: "11px", borderRadius: 12,
-              background: name.trim() ? "oklch(0.62 0.12 38)" : "oklch(0.88 0.020 72)",
+              background: name.trim() ? "var(--accent)" : "oklch(0.88 0.020 72)",
               color: name.trim() ? "white" : "oklch(0.65 0.015 60)",
               fontWeight: 600, fontSize: 14, fontFamily: "'DM Sans', sans-serif", border: "none",
               cursor: name.trim() ? "pointer" : "not-allowed",

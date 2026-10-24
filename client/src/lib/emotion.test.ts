@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { faceToMood, detectPitch, voiceToArousal, fuseMood, labelFor } from "./emotion";
+import { faceToMood, detectPitch, voiceToArousal, fuseMood, labelFor, calibrate, averageBlendshapes, LABEL_CENTROID } from "./emotion";
 
 describe("face → mood", () => {
   it("reads a smile as positive", () => {
@@ -40,5 +40,24 @@ describe("fusion", () => {
   });
   it("returns null with no signals", () => {
     expect(fuseMood(null, null, null)).toBeNull();
+  });
+});
+
+describe("calibration & correction", () => {
+  it("doesn't read a naturally downturned resting mouth as sad once calibrated", () => {
+    const resting = { mouthFrownLeft: 0.35, mouthFrownRight: 0.35, browDownLeft: 0.2, browDownRight: 0.2 };
+    expect(labelFor(faceToMood(resting))).toMatch(/low|tense/);
+    const neutral = averageBlendshapes([resting, resting, resting]);
+    expect(labelFor(faceToMood(calibrate(resting, neutral)))).not.toMatch(/low|tense/);
+  });
+  it("still detects a real smile relative to the baseline", () => {
+    const neutral = { mouthFrownLeft: 0.3, mouthFrownRight: 0.3 };
+    const smiling = { mouthFrownLeft: 0.3, mouthFrownRight: 0.3, mouthSmileLeft: 0.7, mouthSmileRight: 0.7, cheekSquintLeft: 0.5, cheekSquintRight: 0.5 };
+    expect(faceToMood(calibrate(smiling, neutral)).valence).toBeGreaterThan(0.5);
+  });
+  it("lets the user's own correction override sensors", () => {
+    const m = fuseMood({ valence: 0.8, arousal: 0.8 }, 0.9, null, LABEL_CENTROID.tired)!;
+    expect(m.label).toBe("tired");
+    expect(m.sources).toEqual(["self"]);
   });
 });

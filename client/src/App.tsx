@@ -18,11 +18,14 @@ import FormCoach from "./pages/FormCoach";
 import WomensHealth from "./pages/WomensHealth";
 import Progress from "./pages/Progress";
 import CoachChat, { CoachFab } from "./components/CoachChat";
+import { ThemeSync, Confetti } from "./components/Fun";
 
 function AppShell() {
   const { profile, hydrated } = useApp();
   const [activeTab, setActiveTab] = useState("home");
   const [coachOpen, setCoachOpen] = useState(false);
+  const [coachPrompt, setCoachPrompt] = useState<string | null>(null);
+  const askCoach = (prompt: string) => { setCoachPrompt(prompt); setCoachOpen(true); };
 
   // Wait for encrypted saved data to be restored before deciding whether to onboard
   if (!hydrated) {
@@ -41,7 +44,7 @@ function AppShell() {
   const isFemale = profile.biologicalSex === "female" && !!profile.womensHealth;
 
   const pages: Record<string, React.ReactNode> = {
-    home:     <Dashboard />,
+    home:     <Dashboard onAskCoach={askCoach} />,
     log:      <LogFood />,
     fitness:  <Fitness />,
     form:     <FormCoach />,
@@ -54,9 +57,11 @@ function AppShell() {
       <div style={{ overflowY: "auto", height: "100dvh", paddingBottom: 80, scrollbarWidth: "none" }}>
         {pages[activeTab] ?? <Dashboard />}
       </div>
+      <ThemeSync />
+      <Confetti />
       <BottomNav active={activeTab} onChange={setActiveTab} isFemale={isFemale} />
       {!coachOpen && activeTab !== "form" && <CoachFab onOpen={() => setCoachOpen(true)} />}
-      <CoachChat open={coachOpen} onClose={() => setCoachOpen(false)} />
+      <CoachChat open={coachOpen} onClose={() => setCoachOpen(false)} initialPrompt={coachPrompt} onPromptUsed={() => setCoachPrompt(null)} />
     </div>
   );
 }
@@ -68,7 +73,7 @@ function App() {
         <TooltipProvider>
           <AppProvider>
             <Toaster position="top-center" richColors />
-            <div style={{ minHeight: "100dvh", background: "oklch(0.93 0.018 75)", display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+            <div style={{ minHeight: "100dvh", background: "var(--app-outer)", transition: "background 0.8s", display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
               <AppShell />
             </div>
           </AppProvider>

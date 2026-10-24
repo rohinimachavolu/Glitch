@@ -12,15 +12,17 @@ import { getMotivationalMessage } from "@/lib/aiService";
 import SupplementLogger from "@/components/SupplementLogger";
 import BodyStatusCard from "@/components/BodyStatusCard";
 import AppraisalCheckIn from "@/components/AppraisalCheckIn";
+import NudgeStrip from "@/components/NudgeStrip";
+import { PhaseBanner, celebrate } from "@/components/Fun";
 
 const MACRO_COLORS = {
-  cal:     "oklch(0.62 0.12 38)",
+  cal:     "var(--accent)",
   protein: "oklch(0.72 0.08 148)",
   carbs:   "oklch(0.78 0.10 75)",
   fats:    "oklch(0.68 0.09 25)",
 };
 
-export default function Dashboard() {
+export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string) => void }) {
   const { profile, nutritionGoals, nutritionLoading, meals, steps, streak } = useApp();
   const [motivMsg, setMotivMsg] = useState<string | null>(null);
 
@@ -57,6 +59,15 @@ export default function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meals.length]);
 
+  // 🎉 when protein goal is reached (once per day)
+  const proteinHit = !!nutritionGoals && totals.protein >= nutritionGoals.proteinTarget;
+  useEffect(() => {
+    if (!proteinHit) return;
+    const key = `glitch.protein.${new Date().toDateString()}`;
+    try { if (localStorage.getItem(key)) return; localStorage.setItem(key, "1"); } catch { /* storage unavailable */ }
+    celebrate("Protein goal smashed! 💪");
+  }, [proteinHit]);
+
   const stepGoal = nutritionGoals?.stepGoal ?? 8000;
   const dynamicStepGoal =
     nutritionGoals && totals.cal > nutritionGoals.calorieTarget
@@ -73,13 +84,13 @@ export default function Dashboard() {
             width: 72,
             height: 72,
             borderRadius: "50%",
-            background: "oklch(0.62 0.12 38 / 0.12)",
+            background: "color-mix(in oklch, var(--accent) 12%, transparent)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Loader2 size={32} style={{ color: "oklch(0.62 0.12 38)", animation: "spin 1s linear infinite" }} />
+          <Loader2 size={32} style={{ color: "var(--accent)", animation: "spin 1s linear infinite" }} />
         </div>
         <div style={{ textAlign: "center" }}>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>
@@ -109,7 +120,7 @@ export default function Dashboard() {
       {/* Hero header */}
       <div
         style={{
-          background: "linear-gradient(160deg, oklch(0.62 0.12 38 / 0.12) 0%, oklch(0.97 0.015 75) 60%)",
+          background: "linear-gradient(160deg, color-mix(in oklch, var(--accent) 12%, transparent) 0%, var(--app-bg) 60%)",
           padding: "20px 20px 16px",
           position: "relative",
           overflow: "hidden",
@@ -123,7 +134,7 @@ export default function Dashboard() {
             width: 120,
             height: 120,
             borderRadius: "60% 40% 70% 30% / 50% 60% 40% 50%",
-            background: "oklch(0.62 0.12 38 / 0.12)",
+            background: "color-mix(in oklch, var(--accent) 12%, transparent)",
             zIndex: 0,
           }}
         />
@@ -137,7 +148,7 @@ export default function Dashboard() {
             </div>
             <div
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl"
-              style={{ background: "oklch(0.62 0.12 38)", boxShadow: "0 4px 12px oklch(0.62 0.12 38 / 0.3)" }}
+              style={{ background: "var(--accent)", boxShadow: "0 4px 12px color-mix(in oklch, var(--accent) 30%, transparent)" }}
             >
               <Flame size={14} color="white" />
               <span style={{ fontSize: 13, fontWeight: 700, color: "white", fontFamily: "'DM Sans', sans-serif" }}>
@@ -161,6 +172,8 @@ export default function Dashboard() {
       </div>
 
       <div className="flex flex-col gap-4 px-4 pt-2">
+        <PhaseBanner />
+        {onAskCoach && <NudgeStrip onAsk={onAskCoach} />}
         <AppraisalCheckIn />
         <BodyStatusCard />
 
@@ -203,7 +216,7 @@ export default function Dashboard() {
             <MicroBar label="Omega-3"     value={totals.omega3} target={nutritionGoals.omega3Target} unit="g"   color="oklch(0.62 0.10 200)" />
             <MicroBar label="Vitamin D"   value={0}             target={nutritionGoals.vitDTarget}   unit=" IU" color="oklch(0.78 0.10 75)" />
             <MicroBar label="Vitamin B12" value={0}             target={nutritionGoals.vitB12Target} unit="mcg" color="oklch(0.68 0.09 25)" />
-            <MicroBar label="Iron"        value={0}             target={nutritionGoals.ironTarget}   unit="mg"  color="oklch(0.62 0.12 38)" />
+            <MicroBar label="Iron"        value={0}             target={nutritionGoals.ironTarget}   unit="mg"  color="var(--accent)" />
           </div>
 
         </div>
@@ -222,7 +235,7 @@ export default function Dashboard() {
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)" }}>
               Steps Today
             </h2>
-            <span style={{ fontSize: 20, fontWeight: 700, color: "oklch(0.62 0.12 38)", fontFamily: "'DM Sans', sans-serif" }}>
+            <span style={{ fontSize: 20, fontWeight: 700, color: "var(--accent)", fontFamily: "'DM Sans', sans-serif" }}>
               {steps.toLocaleString()}
             </span>
           </div>
@@ -232,7 +245,7 @@ export default function Dashboard() {
                 height: "100%",
                 width: `${stepPct}%`,
                 borderRadius: 999,
-                background: "linear-gradient(90deg, oklch(0.62 0.12 38), oklch(0.72 0.08 148))",
+                background: "linear-gradient(90deg, var(--accent), oklch(0.72 0.08 148))",
                 transition: "width 1s cubic-bezier(0.23, 1, 0.32, 1)",
               }}
             />
@@ -302,7 +315,7 @@ export default function Dashboard() {
                           fontWeight: 600,
                           padding: "2px 8px",
                           borderRadius: 999,
-                          background: "oklch(0.62 0.12 38 / 0.12)",
+                          background: "color-mix(in oklch, var(--accent) 12%, transparent)",
                           color: "oklch(0.50 0.10 38)",
                           fontFamily: "'DM Sans', sans-serif",
                         }}

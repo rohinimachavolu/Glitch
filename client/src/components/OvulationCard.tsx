@@ -6,9 +6,10 @@
  */
 import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from "recharts";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, hasActiveCycle, tracksOvulation } from "@/contexts/AppContext";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 import type { OvulationResult } from "@/lib/healthMetrics";
+import { hormoneNotes } from "@/lib/hormones";
 
 const INK = "oklch(0.25 0.025 50)";
 const MUTED = "oklch(0.55 0.020 60)";
@@ -31,12 +32,12 @@ export default function OvulationCard() {
   const wh = profile?.womensHealth;
   const card = { background: "oklch(0.99 0.010 78)", borderRadius: 20, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" };
 
-  if (wh?.hormonalContraception) {
+  if (hasActiveCycle(profile) && !tracksOvulation(profile)) {
     return (
       <div style={card}>
         <Title />
         <p style={{ fontSize: 12.5, color: MUTED, fontFamily: font, lineHeight: 1.5 }}>
-          Most hormonal birth control pauses ovulation, so temperature-based detection is switched off. We still use your WHOOP data for recovery, stress and energy.
+          {hormoneNotes(wh?.hormones).find((n) => n.suppressesOvulation)?.note ?? "Most hormonal birth control pauses ovulation, so temperature-based detection is switched off."} We still use your WHOOP data for recovery, stress and energy.
         </p>
       </div>
     );
@@ -50,7 +51,7 @@ export default function OvulationCard() {
           After ovulation, progesterone raises skin temperature ~0.3 °C and resting heart rate a few beats. WHOOP measures both every night, so Glitch can confirm whether you actually ovulated, instead of guessing from the calendar.
         </p>
         <motion.button whileTap={{ scale: 0.96 }} onClick={connectWhoopDemo}
-          style={{ padding: "9px 14px", borderRadius: 12, border: "none", background: "oklch(0.62 0.12 38)", color: "white", fontWeight: 700, fontSize: 12.5, fontFamily: font }}>
+          style={{ padding: "9px 14px", borderRadius: 12, border: "none", background: "var(--accent)", color: "white", fontWeight: 700, fontSize: 12.5, fontFamily: font }}>
           Try with demo WHOOP data
         </motion.button>
       </div>
@@ -139,7 +140,7 @@ function Title() {
   return (
     <div className="flex items-center justify-between mb-2">
       <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: INK }}>Did I ovulate?</p>
-      <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "oklch(0.62 0.12 38 / 0.12)", color: "oklch(0.52 0.12 38)", fontFamily: font }}>WHOOP-CONFIRMED</span>
+      <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 12%, transparent)", color: "oklch(0.52 0.12 38)", fontFamily: font }}>WHOOP-CONFIRMED</span>
     </div>
   );
 }

@@ -10,19 +10,22 @@ import { nanoid } from "nanoid";
 import { Camera, CameraOff, Mic, Send, Trash2, Undo2, Volume2, VolumeX, X } from "lucide-react";
 import { toast } from "sonner";
 import MoodOrb from "./MoodOrb";
-import { useApp, ChatMessage, Meal, getCycleDay, getCyclePhase, hasActiveCycle } from "@/contexts/AppContext";
+import { useApp, ChatMessage, Meal, getCycleDay, getCyclePhase, tracksOvulation } from "@/contexts/AppContext";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 import { useFaceEmotion } from "@/hooks/useFaceEmotion";
 import { useVoice } from "@/hooks/useVoice";
-import { fuseMood, LABEL_EMOJI, type MoodRead } from "@/lib/emotion";
+import { fuseMood, LABEL_EMOJI, LABEL_CENTROID, type MoodLabel, type MoodRead } from "@/lib/emotion";
 import { buildSystemPrompt, parseCoachResponse } from "@/lib/coachAgent";
 import { coachCompletion } from "@/lib/aiService";
 import { LIFE_STAGES } from "@/lib/lifeStage";
 import { useMenopauseInsights } from "@/hooks/useMenopauseInsights";
+import { useNudges } from "@/hooks/useNudges";
+import { hormoneSummary } from "@/lib/hormones";
+import NudgeStrip from "./NudgeStrip";
 
 const INK = "oklch(0.25 0.025 50)";
 const MUTED = "oklch(0.55 0.020 60)";
-const ACCENT = "oklch(0.62 0.12 38)";
+const ACCENT = "var(--accent)";
 const font = "'DM Sans', sans-serif";
 
 const SUGGESTIONS = [
@@ -49,11 +52,12 @@ export function CoachFab({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-export default function CoachChat({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed }: { open: boolean; onClose: () => void; initialPrompt?: string | null; onPromptUsed?: () => void }) {
   const app = useApp();
-  const { profile, nutritionGoals, meals, chatMessages, addChatMessage, updateChatMessage, clearChat, addMeal, removeMeal, appraisalLog } = app;
+  const { profile, nutritionGoals, meals, chatMessages, addChatMessage, updateChatMessage, clearChat, addMeal, removeMeal, appraisalLog, supplements } = app;
   const h = useHealthInsights();
   const meno = useMenopauseInsights();
+  const nudges = useNudges();
 
   const [cameraOn, setCameraOn] = useState(false);
   const [speakOn, setSpeakOn] = useState(false);
@@ -62,14 +66,21 @@ export default function CoachChat({ open, onClose }: { open: boolean; onClose: (
   const [speaking, setSpeaking] = useState(false);
   const [textRead, setTextRead] = useState<MoodRead | null>(null);
   const [voiceArousal, setVoiceArousal] = useState<number | null>(null);
+  // User's own correction of the mood read; expires after 10 minutes
+  const [selfMood, setSelfMood] = useState<{ label: MoodLabel; until: number } | null>(null);
+  const [pickMood, setPickMood] = useState(false);
+  const selfRead = selfMood && selfMood.until > Date.now() ? LABEL_CENTROID[selfMood.label] : null;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const face = useFaceEmotion(open && cameraOn);
   const voice = useVoice((text, arousal) => { if (arousal != null) setVoiceArousal(arousal); send(text, "voice", arousal); });
 
-  const fused = useMemo(() => fuseMood(face.read, voiceArousal, textRead), [face.read, voiceArousal, textRead]);
+  const fused = useMemo(() => fuseMood(face.read, voiceArousal, textRead, selfRead), [face.read, voiceArousal, textRead, selfRead]);
   const orbMode = voice.listening ? "listening" : thinking ? "thinking" : speaking ? "speaking" : "idle";
 
+  useEffect(() => {
+    if (open && initialPrompt) { send(initialPrompt); onPromptUsed?.(); }
+  }, [open, initialPrompt]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [chatMessages.length, thinking, voice.interim]);
   useEffect(() => { if (!open) { setCameraOn(false); voice.stop(); speechSynthesis?.cancel(); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -87,7 +98,7 @@ export default function CoachChat({ open, onClose }: { open: boolean; onClose: (
 
   function context() {
     const wh = profile?.womensHealth;
-    const cycling = hasActiveCycle(profile) && wh && !wh.hormonalContraception;
+    const cycling = tracksOvulation(profile);
     const phase = cycling ? h.cycle?.currentPhase ?? getCyclePhase(getCycleDay(wh!.lastPeriodDate, wh!.cycleLength), wh!.cycleLength) : null;
     const lastCheck = appraisalLog[appraisalLog.length - 1];
     return buildSystemPrompt({
@@ -103,6 +114,9 @@ export default function CoachChat({ open, onClose }: { open: boolean; onClose: (
       menopause: meno && (wh?.noCycleReason === "menopause" || wh?.noCycleReason === "perimenopause" || (profile?.age ?? 0) >= 40) && meno.stage.stage !== "reproductive"
         ? { stage: meno.stage.label, flashesToday: meno.flashesToday, nightSweatNights14: meno.likelyWarm14, topTrigger: meno.triggers[0]?.label }
         : null,
+      hormones: hormoneSummary(wh?.hormones),
+      nudges: nudges.map((n) => `${n.title}: ${n.body}`),
+      supplements: supplements.map((s) => `${s.name} (${s.time})`),
       lastCheckIn: lastCheck ? `${lastCheck.stateLabel} (${new Date(lastCheck.at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })})` : null,
       localTime: new Date().toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" }),
     });
@@ -112,7 +126,7 @@ export default function CoachChat({ open, onClose }: { open: boolean; onClose: (
     const t = text.trim();
     if (!t || thinking) return;
     setDraft("");
-    const moodNow = fuseMood(face.read, arousal, textRead);
+    const moodNow = fuseMood(face.read, arousal, textRead, selfRead);
     const userMsg: ChatMessage = { id: nanoid(), role: "user", text: t, at: new Date().toISOString(), via, mood: moodNow?.label };
     addChatMessage(userMsg);
     setThinking(true);
@@ -131,6 +145,7 @@ export default function CoachChat({ open, onClose }: { open: boolean; onClose: (
             id: nanoid(), type: a.meal.type, name: a.meal.name,
             calories: Math.round(a.meal.calories), protein: Math.round(a.meal.protein), carbs: Math.round(a.meal.carbs),
             fats: Math.round(a.meal.fats), fiber: Math.round(a.meal.fiber ?? 0), omega3: 0,
+            sugar: a.meal.sugar != null ? Math.round(a.meal.sugar) : undefined,
             time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }), loggedAt: new Date().toISOString(),
           };
           addMeal(meal);
@@ -187,16 +202,32 @@ export default function CoachChat({ open, onClose }: { open: boolean; onClose: (
                 <div style={{ position: "absolute", left: 14, top: 6, width: 78, height: 104, borderRadius: 16, overflow: "hidden", boxShadow: "0 6px 18px oklch(0.25 0.025 50 / 0.25)", background: "#222" }}>
                   <video ref={face.videoRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }} />
                   <span style={{ position: "absolute", bottom: 4, left: 4, right: 4, fontSize: 9, fontWeight: 700, color: "white", fontFamily: font, textAlign: "center", background: "rgba(0,0,0,0.45)", borderRadius: 6, padding: "2px 0" }}>
-                    {face.status === "loading" ? "loading…" : face.status === "no_face" ? "no face" : face.status === "error" ? "camera blocked" : "on-device"}
+                    {face.status === "loading" ? "loading…" : face.status === "calibrating" ? "relax your face…" : face.status === "no_face" ? "no face" : face.status === "error" ? "camera blocked" : "on-device"}
                   </span>
                 </div>
               )}
               <MoodOrb state={{ valence: fused?.valence ?? 0.1, arousal: fused?.arousal ?? 0.35, level: voice.level, mode: orbMode }} size={150} />
               <AnimatePresence mode="wait">
-                <motion.p key={fused?.label ?? "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  style={{ fontSize: 12, fontWeight: 700, color: INK, fontFamily: font, marginTop: -4, padding: "4px 10px", borderRadius: 999, background: "oklch(1 0 0 / 0.6)" }}>
-                  {voice.listening ? "🎙️ Listening…" : thinking ? "💭 Thinking…" : fused ? `${LABEL_EMOJI[fused.label]} I'm reading: ${fused.label} · ${fused.sources.join(" + ")}` : "Hi, I'm Glitchy 👋 Talk to me or type"}
-                </motion.p>
+                <motion.button key={fused?.label ?? "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  onClick={() => setPickMood((v) => !v)} aria-expanded={pickMood} title="Tap to correct how I'm reading you"
+                  style={{ fontSize: 12, fontWeight: 700, color: INK, fontFamily: font, marginTop: -4, padding: "4px 10px", borderRadius: 999, background: "oklch(1 0 0 / 0.6)", border: "none" }}>
+                  {voice.listening ? "🎙️ Listening…" : thinking ? "💭 Thinking…" : fused ? `${LABEL_EMOJI[fused.label]} ${fused.sources[0] === "self" ? "You said" : "I'm reading"}: ${fused.label}${fused.sources[0] === "self" ? "" : ` · ${fused.sources.join(" + ")}`} ✎` : "Hi, I'm Glitchy 👋 How are you feeling? ✎"}
+                </motion.button>
+              </AnimatePresence>
+              <AnimatePresence>
+                {pickMood && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                    className="flex flex-wrap justify-center gap-1" style={{ marginTop: 6, padding: "0 14px" }}>
+                    <span style={{ width: "100%", textAlign: "center", fontSize: 11, color: MUTED, fontFamily: font }}>Not quite? I'm actually feeling…</span>
+                    {(Object.keys(LABEL_EMOJI) as MoodLabel[]).map((l) => (
+                      <button key={l} onClick={() => { setSelfMood({ label: l, until: Date.now() + 10 * 60_000 }); setPickMood(false); }}
+                        style={{ padding: "5px 10px", borderRadius: 999, border: "1.5px solid oklch(0.88 0.020 72)", background: "white", fontSize: 12, fontFamily: font, color: INK }}>
+                        {LABEL_EMOJI[l]} {l}
+                      </button>
+                    ))}
+                    {cameraOn && <button onClick={() => { face.recalibrate(); setPickMood(false); }} style={{ padding: "5px 10px", borderRadius: 999, border: "none", background: "transparent", fontSize: 11.5, fontFamily: font, color: "var(--accent)", fontWeight: 700 }}>↻ Recalibrate camera</button>}
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
 
@@ -211,11 +242,16 @@ export default function CoachChat({ open, onClose }: { open: boolean; onClose: (
               <div className="flex flex-col gap-2">
                 {chatMessages.map((m) => <Bubble key={m.id} m={m} onUndo={() => undo(m)} />)}
                 {voice.listening && voice.interim && (
-                  <div style={{ alignSelf: "flex-end", maxWidth: "82%", padding: "9px 13px", borderRadius: "18px 18px 4px 18px", background: "oklch(0.62 0.12 38 / 0.5)", color: "white", fontSize: 14, fontFamily: font, fontStyle: "italic" }}>{voice.interim}…</div>
+                  <div style={{ alignSelf: "flex-end", maxWidth: "82%", padding: "9px 13px", borderRadius: "18px 18px 4px 18px", background: "color-mix(in oklch, var(--accent) 50%, transparent)", color: "white", fontSize: 14, fontFamily: font, fontStyle: "italic" }}>{voice.interim}…</div>
                 )}
                 {thinking && <TypingDots />}
               </div>
             </div>
+
+            {/* Proactive nudges */}
+            {!thinking && chatMessages.length < 6 && (
+              <div style={{ padding: "0 14px 8px" }}><NudgeStrip compact onAsk={(p) => send(p)} /></div>
+            )}
 
             {/* Suggestions */}
             {chatMessages.length < 2 && !thinking && (
@@ -243,7 +279,7 @@ export default function CoachChat({ open, onClose }: { open: boolean; onClose: (
               ) : (
                 <motion.button whileTap={{ scale: 0.9 }} aria-label={voice.listening ? "Stop listening" : "Talk to Glitchy"}
                   onClick={() => (voice.supported ? (voice.listening ? voice.stop() : voice.start()) : toast.info("Voice input needs Chrome, Edge or Safari."))}
-                  animate={{ boxShadow: voice.listening ? `0 0 0 ${6 + voice.level * 14}px oklch(0.62 0.12 38 / 0.25)` : "0 0 0 0px transparent" }}
+                  animate={{ boxShadow: voice.listening ? `0 0 0 ${6 + voice.level * 14}px color-mix(in oklch, var(--accent) 25%, transparent)` : "0 0 0 0px transparent" }}
                   style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: voice.listening ? "oklch(0.55 0.15 30)" : ACCENT, color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Mic size={19} />
                 </motion.button>

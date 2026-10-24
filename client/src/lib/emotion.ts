@@ -15,7 +15,7 @@ export interface MoodRead {
 
 export interface FusedMood extends MoodRead {
   label: MoodLabel;
-  sources: ("face" | "voice" | "text")[];
+  sources: ("face" | "voice" | "text" | "self")[];
 }
 
 export type MoodLabel = "upbeat" | "content" | "calm" | "neutral" | "tired" | "low" | "tense";
@@ -40,11 +40,39 @@ export function faceToMood(b: Blendshapes): MoodRead {
   const jawOpen = b.jawOpen ?? 0;
   const blink = avg(b, "eyeBlinkLeft", "eyeBlinkRight");
 
-  const valence = 1.4 * smile + 0.4 * cheek - 1.2 * frown - 0.9 * browDown - 0.6 * sneer - 0.4 * press - 0.3 * browInnerUp * (1 - smile);
+  const dimple = avg(b, "mouthDimpleLeft", "mouthDimpleRight");
+  const lowerDown = avg(b, "mouthLowerDownLeft", "mouthLowerDownRight");
+  const eyeSquint = avg(b, "eyeSquintLeft", "eyeSquintRight");
+  // A "Duchenne" (genuine) smile engages the eyes/cheeks as well as the mouth
+  const genuine = smile * (0.6 + 0.4 * Math.min(1, cheek + eyeSquint));
+  const valence = 1.5 * genuine + 0.3 * dimple + 0.2 * cheek - 1.2 * frown - 0.9 * browDown - 0.6 * sneer - 0.4 * press - 0.3 * lowerDown * (1 - smile) - 0.4 * browInnerUp * (1 - smile);
   // Droopy, half-closed eyes read as low arousal
   const arousal = 0.25 + 0.9 * eyeWide + 0.5 * browInnerUp + 0.35 * jawOpen + 0.5 * browDown + 0.2 * press + 0.3 * smile - 0.35 * Math.max(0, blink - 0.35);
   return { valence: clamp(valence, -1, 1), arousal: clamp(arousal, 0, 1) };
 }
+
+/**
+ * Personal calibration: everyone's resting face differs (a naturally downturned mouth isn't sadness).
+ * Subtract the user's neutral baseline, captured over the first ~1.5 s, and amplify the change.
+ */
+export function averageBlendshapes(frames: Blendshapes[]): Blendshapes {
+  const out: Blendshapes = {};
+  for (const f of frames) for (const k in f) out[k] = (out[k] ?? 0) + f[k] / frames.length;
+  return out;
+}
+
+export function calibrate(b: Blendshapes, neutral: Blendshapes, gain = 1.4): Blendshapes {
+  const out: Blendshapes = {};
+  for (const k in b) out[k] = Math.max(0, Math.min(1, (b[k] - (neutral[k] ?? 0)) * gain));
+  return out;
+}
+
+/** Centre point of each label on the circumplex, used when the user corrects the read. */
+export const LABEL_CENTROID: Record<MoodLabel, MoodRead> = {
+  upbeat: { valence: 0.6, arousal: 0.75 }, content: { valence: 0.45, arousal: 0.45 }, calm: { valence: 0.2, arousal: 0.25 },
+  neutral: { valence: 0, arousal: 0.45 }, tired: { valence: -0.1, arousal: 0.1 }, low: { valence: -0.55, arousal: 0.3 },
+  tense: { valence: -0.5, arousal: 0.75 },
+};
 
 // ── Voice ────────────────────────────────────────────────────
 /** Fundamental frequency via autocorrelation; null if unvoiced/too quiet. */
@@ -98,7 +126,9 @@ export function labelFor(m: MoodRead): MoodLabel {
  * Weighted fusion. Face and text both inform valence; voice informs arousal only (prosody is a
  * weak valence signal). Missing modalities are simply skipped.
  */
-export function fuseMood(face: MoodRead | null, voiceArousal: number | null, text: MoodRead | null): FusedMood | null {
+export function fuseMood(face: MoodRead | null, voiceArousal: number | null, text: MoodRead | null, self?: MoodRead | null): FusedMood | null {
+  // The user's own correction always wins: people know their feelings better than a camera does
+  if (self) return { ...self, label: labelFor(self), sources: ["self"] };
   const sources: FusedMood["sources"] = [];
   let vSum = 0, vW = 0, aSum = 0, aW = 0;
   if (face) { sources.push("face"); vSum += face.valence * 0.5; vW += 0.5; aSum += face.arousal * 0.35; aW += 0.35; }

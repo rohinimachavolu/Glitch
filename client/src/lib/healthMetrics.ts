@@ -6,6 +6,7 @@
  */
 import type { DailyPhysiology, WhoopWorkout } from "./whoop/types";
 import type { CyclePhase } from "@/contexts/AppContext";
+import tunedParams from "./models/ovulationParams.json";
 
 const DAY = 86_400_000;
 
@@ -75,7 +76,23 @@ export interface OvulationResult {
  * 3-day mean at least 0.2 °C higher, and the rise is sustained. A matching resting-HR rise
  * (progesterone raises both) upgrades confidence.
  */
-export function detectOvulation(days: DailyPhysiology[], win: CycleWindow): OvulationResult {
+export interface OvulationParams {
+  /** Each of the 3 post-shift days must exceed the 6-day baseline by this much (°C) */
+  eachAbove: number;
+  /** The 3-day mean must exceed the baseline by this much (°C) */
+  meanRise: number;
+  /** The following 6 days must stay this far above baseline on average (°C) */
+  sustainRise: number;
+}
+
+/**
+ * Defaults follow the fertility-awareness "3 over 6" rule. They can be re-tuned against hormone-confirmed
+ * ovulation with scripts/validate_ovulation_mcphases.ts (mcPHASES, PhysioNet), which writes
+ * models/ovulationParams.json — only aggregate thresholds, never participant data.
+ */
+export const DEFAULT_OVULATION_PARAMS: OvulationParams = { eachAbove: 0.1, meanRise: 0.2, sustainRise: 0.15, ...tunedParams.params };
+
+export function detectOvulation(days: DailyPhysiology[], win: CycleWindow, params: OvulationParams = DEFAULT_OVULATION_PARAMS): OvulationResult {
   const inCycle = days.filter((d) => d.date >= win.start && d.date <= win.end);
   const temps = inCycle.map((d) => d.skinTemp);
   if (nums(temps).length < 12) return { cycleStart: win.start, status: "insufficient_data" };
@@ -86,10 +103,10 @@ export function detectOvulation(days: DailyPhysiology[], win: CycleWindow): Ovul
     if (before.length < 4 || after.some((t) => t == null)) continue;
     const base = mean(before);
     const a = after as number[];
-    if (!a.every((t) => t > base + 0.1) || mean(a) < base + 0.2) continue;
+    if (!a.every((t) => t > base + params.eachAbove) || mean(a) < base + params.meanRise) continue;
     // Sustained: the rest of the cycle (up to 6 more days) stays elevated
     const sustain = nums(temps.slice(i, i + 6));
-    if (mean(sustain) < base + 0.15) continue;
+    if (mean(sustain) < base + params.sustainRise) continue;
 
     const follicular = inCycle.slice(Math.max(0, i - 6), i);
     const luteal = inCycle.slice(i, i + 6);

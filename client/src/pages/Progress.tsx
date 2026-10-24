@@ -34,7 +34,7 @@ function NutritionScore({ meals, goals }: {
   ));
   const badge = score >= 80 ? { label: "Excellent", color: "oklch(0.72 0.08 148)" }
               : score >= 60 ? { label: "Good",      color: "oklch(0.78 0.10 75)"  }
-              :               { label: "Needs Work", color: "oklch(0.62 0.12 38)"  };
+              :               { label: "Needs Work", color: "var(--accent)"  };
 
   return (
     <div
@@ -134,7 +134,7 @@ export default function Progress() {
          : d.steps,
   }));
 
-  const barColor = chartTab === "Calories" ? "oklch(0.62 0.12 38)"
+  const barColor = chartTab === "Calories" ? "var(--accent)"
                  : chartTab === "Protein"  ? "oklch(0.72 0.08 148)"
                  : "oklch(0.68 0.09 25)";
 
@@ -211,7 +211,7 @@ export default function Progress() {
                     padding: "6px 14px",
                     borderRadius: 999,
                     border: "none",
-                    background: chartTab === t ? "oklch(0.62 0.12 38)" : "oklch(0.93 0.018 75)",
+                    background: chartTab === t ? "var(--accent)" : "oklch(0.93 0.018 75)",
                     color: chartTab === t ? "white" : "oklch(0.45 0.025 50)",
                     fontSize: 12,
                     fontWeight: 600,
@@ -247,7 +247,7 @@ export default function Progress() {
                     fontFamily: "'DM Sans', sans-serif",
                     boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.10)",
                   }}
-                  cursor={{ fill: "oklch(0.62 0.12 38 / 0.06)" }}
+                  cursor={{ fill: "color-mix(in oklch, var(--accent) 6%, transparent)" }}
                 />
                 <Bar dataKey="value" fill={barColor} radius={[6, 6, 0, 0]} maxBarSize={32} />
               </BarChart>
@@ -280,7 +280,7 @@ export default function Progress() {
                 { label: "Fats",      val: meals.reduce((a,m) => a+m.fats,    0), target: nutritionGoals.fatsTarget,     unit: "g" },
               ].map(({ label, val, target, unit }) => {
                 const pct = Math.min((val / target) * 100, 100);
-                const color = pct >= 90 ? "oklch(0.72 0.08 148)" : pct >= 60 ? "oklch(0.78 0.10 75)" : "oklch(0.62 0.12 38)";
+                const color = pct >= 90 ? "oklch(0.72 0.08 148)" : pct >= 60 ? "oklch(0.78 0.10 75)" : "var(--accent)";
                 return (
                   <div key={label}>
                     <div className="flex justify-between mb-1">
@@ -337,7 +337,7 @@ export default function Progress() {
                 style={{
                   padding: "5px 12px",
                   borderRadius: 10,
-                  background: "oklch(0.62 0.12 38)",
+                  background: "var(--accent)",
                   color: "white",
                   fontSize: 12,
                   fontWeight: 600,
@@ -386,7 +386,7 @@ export default function Progress() {
                   dataKey="weight"
                   stroke="oklch(0.62 0.12 38)"
                   strokeWidth={2.5}
-                  dot={{ fill: "oklch(0.62 0.12 38)", r: 4 }}
+                  dot={{ fill: "var(--accent)", r: 4 }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>

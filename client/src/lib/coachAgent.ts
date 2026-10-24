@@ -15,6 +15,7 @@ export const MealActionSchema = z.object({
   carbs: z.number().min(0).max(500),
   fats: z.number().min(0).max(300),
   fiber: z.number().min(0).max(100).default(0),
+  sugar: z.number().min(0).max(300).optional(),
 });
 export type MealAction = z.infer<typeof MealActionSchema>;
 
@@ -66,6 +67,9 @@ export interface CoachContext {
   mood?: FusedMood | null;
   lastCheckIn?: string | null;
   menopause?: { stage: string; flashesToday: number; nightSweatNights14: number; topTrigger?: string } | null;
+  hormones?: string | null;
+  nudges?: string[];
+  supplements?: string[];
   localTime: string;
 }
 
@@ -80,7 +84,7 @@ USER
 - Local time: ${c.localTime}
 - Today so far: ${eaten.cal} kcal, ${eaten.p} g protein${c.calorieTarget ? ` (targets ${c.calorieTarget} kcal / ${c.proteinTarget} g protein)` : ""}
 - Today's meals: ${c.todayMeals.length ? c.todayMeals.map((m) => `${m.type}: ${m.name} (${m.calories} kcal)`).join("; ") : "none logged"}${c.body ? `\n- Body (WHOOP): recovery ${c.body.recovery ?? "?"}%, stress ${c.body.stress ?? "?"}, energy ${c.body.energy ?? "?"}%, sleep ${c.body.sleep ?? "?"}%${c.body.phase ? `, cycle phase ${c.body.phase}` : ""}` : ""}${c.lastCheckIn ? `\n- Last check-in: ${c.lastCheckIn}` : ""}${c.menopause ? `\n- Menopause: ${c.menopause.stage}; ${c.menopause.flashesToday} hot flashes today; ${c.menopause.nightSweatNights14} likely night-sweat nights in 14 days${c.menopause.topTrigger ? `; strongest personal trigger: ${c.menopause.topTrigger}` : ""}. If they mention a hot flash, empathise and suggest cooling strategies (layers, cold water, slow breathing); for treatment questions, encourage a clinician conversation.` : ""}
-- Mood read (on-device face/voice/text): ${c.mood ? `${c.mood.label} (from ${c.mood.sources.join("+")})` : "unknown"}
+${c.hormones ? `- Hormones/contraception (shared with consent): ${c.hormones}\n` : ""}${c.supplements?.length ? `- Supplements: ${c.supplements.join("; ")}\n` : ""}${c.nudges?.length ? `- Things worth gently raising today (appraisal-framed: a manageable challenge, never a failure; at most one per reply, only if relevant): ${c.nudges.join(" | ")}\n` : ""}- Mood read (on-device face/voice/text): ${c.mood ? `${c.mood.label} (from ${c.mood.sources.join("+")})` : "unknown"}
 
 TONE: ${tone}
 
@@ -91,6 +95,10 @@ MEAL LOGGING
 - If they correct a meal ("actually it was 3 slices"), add remove_meal with the old name, then log_meal with the corrected one.
 - In your reply, confirm briefly with the calories and mention any assumption ("assuming a medium latte"). Never shame food choices.
 - Don't log food they're only thinking about or asking about.
+- Include "sugar" (grams of total sugar) in every log_meal.
+
+SUPPLEMENTS
+- Know absorption rules: keep iron and calcium (and zinc) 2+ h apart; iron on an empty stomach with vitamin C, away from coffee/tea/dairy; vitamin D/A/E/K and omega-3 with a meal containing fat; levothyroxine on an empty stomach 30–60 min before breakfast and 4 h from calcium/iron. Suggest checking with a pharmacist for medications.
 
 SAFETY
 - No diagnoses or medication advice; suggest a clinician when appropriate.
@@ -98,6 +106,6 @@ SAFETY
 - If they mention self-harm or wanting to die: respond with care and tell them to call or text 988 (US) or 911 in danger.
 
 Respond ONLY with JSON:
-{"reply": "...", "mood_read": {"valence": -1..1, "arousal": 0..1} or null, "actions": [{"type":"log_meal","meal":{"name":"...","type":"Breakfast|Lunch|Dinner|Snack","calories":0,"protein":0,"carbs":0,"fats":0,"fiber":0}} | {"type":"remove_meal","name":"..."}]}
+{"reply": "...", "mood_read": {"valence": -1..1, "arousal": 0..1} or null, "actions": [{"type":"log_meal","meal":{"name":"...","type":"Breakfast|Lunch|Dinner|Snack","calories":0,"protein":0,"carbs":0,"fats":0,"fiber":0,"sugar":0}} | {"type":"remove_meal","name":"..."}]}
 mood_read is YOUR read of their emotional tone from their words (null if neutral/unclear).`;
 }

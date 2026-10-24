@@ -1,0 +1,4 @@
+{
+  "source": "default \"3 over 6\" fertility-awareness rule; not yet tuned (run scripts/validate_ovulation_mcphases.ts with mcPHASES access)",
+  "params": {}
+}

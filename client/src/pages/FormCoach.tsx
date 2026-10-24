@@ -230,7 +230,7 @@ export default function FormCoach() {
       <div style={{ padding: "20px 20px 12px" }}>
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
-            <Eye size={20} style={{ color: "oklch(0.62 0.12 38)" }} />
+            <Eye size={20} style={{ color: "var(--accent)" }} />
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>
               Form Coach
             </h1>
@@ -238,7 +238,7 @@ export default function FormCoach() {
           <button
             onClick={() => setVoiceOn((v) => !v)}
             aria-label={voiceOn ? "Mute voice coach" : "Unmute voice coach"}
-            style={{ padding: 8, borderRadius: 12, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.99 0.010 78)", color: voiceOn ? "oklch(0.62 0.12 38)" : MUTED, display: "flex" }}
+            style={{ padding: 8, borderRadius: 12, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.99 0.010 78)", color: voiceOn ? "var(--accent)" : MUTED, display: "flex" }}
           >
             {voiceOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
@@ -283,7 +283,7 @@ export default function FormCoach() {
                   onClick={() => { stopSession(); setSelected(ex); setShowPicker(false); setSummary(null); }}
                   style={{
                     width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
-                    background: selected.id === ex.id ? "oklch(0.62 0.12 38 / 0.08)" : "transparent",
+                    background: selected.id === ex.id ? "color-mix(in oklch, var(--accent) 8%, transparent)" : "transparent",
                     border: "none", borderBottom: "1px solid oklch(0.88 0.020 72)", cursor: "pointer",
                   }}
                 >
@@ -359,9 +359,9 @@ export default function FormCoach() {
         <button
           onClick={live || status === "loading" ? stopSession : startSession}
           style={{
-            padding: "16px", borderRadius: 18, background: live ? "oklch(0.55 0.08 25)" : "oklch(0.62 0.12 38)",
+            padding: "16px", borderRadius: 18, background: live ? "oklch(0.55 0.08 25)" : "var(--accent)",
             color: "white", fontWeight: 700, fontSize: 16, fontFamily: "'DM Sans', sans-serif", border: "none",
-            boxShadow: `0 6px 20px ${live ? "oklch(0.55 0.08 25 / 0.35)" : "oklch(0.62 0.12 38 / 0.35)"}`,
+            boxShadow: `0 6px 20px ${live ? "oklch(0.55 0.08 25 / 0.35)" : "color-mix(in oklch, var(--accent) 35%, transparent)"}`,
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}
         >
@@ -379,7 +379,7 @@ export default function FormCoach() {
           <div className="flex flex-col gap-2">
             {selected.cues.map((cue, i) => (
               <div key={i} style={{ padding: "8px 12px", borderRadius: 10, background: "oklch(0.93 0.018 75)", display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <span style={{ fontSize: 14, color: "oklch(0.62 0.12 38)" }}>•</span>
+                <span style={{ fontSize: 14, color: "var(--accent)" }}>•</span>
                 <span style={{ fontSize: 13, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{cue}</span>
               </div>
             ))}

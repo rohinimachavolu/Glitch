@@ -129,7 +129,7 @@ export default function LogFood() {
   const confidenceBadge = analyzed
     ? analyzed.confidence === "high"   ? { label: "High confidence", color: "oklch(0.72 0.08 148)" }
     : analyzed.confidence === "medium" ? { label: "Medium confidence", color: "oklch(0.78 0.10 75)" }
-    :                                    { label: "Low confidence — verify", color: "oklch(0.62 0.12 38)" }
+    :                                    { label: "Low confidence — verify", color: "var(--accent)" }
     : null;
 
   return (
@@ -155,7 +155,7 @@ export default function LogFood() {
                 padding: "8px 16px",
                 borderRadius: 999,
                 border: mealType === t ? "none" : "1.5px solid oklch(0.88 0.020 72)",
-                background: mealType === t ? "oklch(0.62 0.12 38)" : "oklch(0.99 0.010 78)",
+                background: mealType === t ? "var(--accent)" : "oklch(0.99 0.010 78)",
                 color: mealType === t ? "white" : "oklch(0.45 0.025 50)",
                 fontSize: 13,
                 fontWeight: 500,
@@ -183,24 +183,24 @@ export default function LogFood() {
               gap: 12,
               height: 200,
               borderRadius: 22,
-              border: "2px dashed oklch(0.62 0.12 38 / 0.4)",
-              background: "oklch(0.62 0.12 38 / 0.05)",
+              border: "2px dashed color-mix(in oklch, var(--accent) 40%, transparent)",
+              background: "color-mix(in oklch, var(--accent) 5%, transparent)",
               cursor: "pointer",
               transition: "all 0.18s",
             }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "oklch(0.62 0.12 38 / 0.10)")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "oklch(0.62 0.12 38 / 0.05)")}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "color-mix(in oklch, var(--accent) 10%, transparent)")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "color-mix(in oklch, var(--accent) 5%, transparent)")}
           >
             <div
               style={{
                 width: 64,
                 height: 64,
                 borderRadius: "50%",
-                background: "oklch(0.62 0.12 38)",
+                background: "var(--accent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 6px 20px oklch(0.62 0.12 38 / 0.35)",
+                boxShadow: "0 6px 20px color-mix(in oklch, var(--accent) 35%, transparent)",
               }}
             >
               <Camera size={28} color="white" />
@@ -276,11 +276,11 @@ export default function LogFood() {
                   gap: 10,
                   padding: "14px",
                   borderRadius: 14,
-                  background: "oklch(0.62 0.12 38 / 0.08)",
-                  border: "1px solid oklch(0.62 0.12 38 / 0.3)",
+                  background: "color-mix(in oklch, var(--accent) 8%, transparent)",
+                  border: "1px solid color-mix(in oklch, var(--accent) 30%, transparent)",
                 }}
               >
-                <AlertCircle size={18} style={{ color: "oklch(0.62 0.12 38)", flexShrink: 0, marginTop: 1 }} />
+                <AlertCircle size={18} style={{ color: "var(--accent)", flexShrink: 0, marginTop: 1 }} />
                 <p style={{ fontSize: 13, color: "oklch(0.40 0.08 38)", fontFamily: "'DM Sans', sans-serif" }}>
                   {analyzeError}
                 </p>
@@ -301,7 +301,7 @@ export default function LogFood() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <span style={{ fontSize: 18 }}>🤖</span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.62 0.12 38)", fontFamily: "'DM Sans', sans-serif" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--accent)", fontFamily: "'DM Sans', sans-serif" }}>
                         AI Analysis
                       </span>
                     </div>
@@ -443,13 +443,13 @@ export default function LogFood() {
                   style={{
                     padding: "16px",
                     borderRadius: 18,
-                    background: "oklch(0.62 0.12 38)",
+                    background: "var(--accent)",
                     color: "white",
                     fontWeight: 700,
                     fontSize: 16,
                     fontFamily: "'DM Sans', sans-serif",
                     border: "none",
-                    boxShadow: "0 6px 20px oklch(0.62 0.12 38 / 0.35)",
+                    boxShadow: "0 6px 20px color-mix(in oklch, var(--accent) 35%, transparent)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -488,7 +488,7 @@ export default function LogFood() {
               style={{
                 padding: "12px 24px",
                 borderRadius: 14,
-                background: "oklch(0.62 0.12 38 / 0.12)",
+                background: "color-mix(in oklch, var(--accent) 12%, transparent)",
                 color: "oklch(0.50 0.10 38)",
                 fontWeight: 600,
                 fontSize: 14,

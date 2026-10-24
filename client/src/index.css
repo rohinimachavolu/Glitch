@@ -51,6 +51,12 @@
 :root {
   --radius: 1rem;
 
+  /* Adaptive theme (overwritten at runtime by lib/theme.ts) */
+  --accent: oklch(0.62 0.12 38);
+  --accent-deep: oklch(0.45 0.12 38);
+  --app-bg: oklch(0.97 0.015 75);
+  --app-outer: oklch(0.93 0.018 75);
+
   /* Warm cream background */
   --background: oklch(0.97 0.015 75);
   --foreground: oklch(0.25 0.025 50);

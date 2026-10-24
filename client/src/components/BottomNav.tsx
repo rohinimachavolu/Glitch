@@ -4,6 +4,7 @@
  * Other users get 5 tabs (Form Coach instead of Cycle).
  */
 import { Home, Camera, Dumbbell, Eye, TrendingUp, Heart } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface BottomNavProps {
   active: string;
@@ -39,29 +40,34 @@ export default function BottomNav({ active, onChange, isFemale = false }: Bottom
         transform: "translateX(-50%)",
         background: "oklch(0.99 0.010 78)",
         borderTop: "1px solid oklch(0.88 0.020 72)",
-        boxShadow: "0 -4px 20px oklch(0.62 0.12 38 / 0.08)",
+        boxShadow: "0 -4px 20px color-mix(in oklch, var(--accent) 8%, transparent)",
         paddingBottom: "env(safe-area-inset-bottom, 8px)",
         paddingTop: 8,
       }}
     >
       {tabs.map(({ id, label, icon: Icon }) => {
         const isActive = active === id;
-        const isCycleTab = id === "cycle";
-        const activeColor = isCycleTab ? "oklch(0.68 0.09 25)" : "oklch(0.62 0.12 38)";
-        const activeBg   = isCycleTab ? "oklch(0.68 0.09 25 / 0.10)" : "oklch(0.62 0.12 38 / 0.10)";
+        const activeColor = "var(--accent)";
         return (
           <button
             key={id}
             onClick={() => onChange(id)}
-            className="flex flex-col items-center gap-0.5 rounded-xl transition-all duration-150"
+            className="flex flex-col items-center gap-0.5 rounded-xl"
             style={{
               padding: isFemale ? "4px 8px" : "4px 12px",
               color: isActive ? activeColor : "oklch(0.55 0.020 60)",
-              background: isActive ? activeBg : "transparent",
+              background: "transparent",
               minWidth: isFemale ? 44 : 52,
+              position: "relative",
             }}
           >
-            <Icon size={isFemale ? 18 : 20} strokeWidth={isActive ? 2.2 : 1.8} style={{ transition: "all 0.15s ease" }} />
+            {isActive && (
+              <motion.span layoutId="nav-pill" transition={{ type: "spring", stiffness: 420, damping: 30 }}
+                style={{ position: "absolute", inset: 0, borderRadius: 12, background: "color-mix(in oklch, var(--accent) 13%, transparent)", zIndex: -1 }} />
+            )}
+            <motion.span animate={{ y: isActive ? -2 : 0, scale: isActive ? 1.12 : 1 }} transition={{ type: "spring", stiffness: 500, damping: 18 }} style={{ display: "flex" }}>
+              <Icon size={isFemale ? 18 : 20} strokeWidth={isActive ? 2.2 : 1.8} />
+            </motion.span>
             <span style={{
               fontSize: isFemale ? 9 : 10,
               fontWeight: isActive ? 600 : 400,

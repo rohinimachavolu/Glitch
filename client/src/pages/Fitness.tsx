@@ -140,7 +140,7 @@ export default function Fitness() {
           </div>
           <p className="text-xs text-orange-600 mb-3">Goal: {dynamicStepGoal.toLocaleString()} steps</p>
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleStartStepCounter} className="flex-1" style={{ background: isActive ? "oklch(0.55 0.08 25)" : "oklch(0.62 0.12 38)" }}>
+            <Button size="sm" onClick={handleStartStepCounter} className="flex-1" style={{ background: isActive ? "oklch(0.55 0.08 25)" : "var(--accent)" }}>
               <Smartphone size={14} className="mr-1" />
               {isActive ? "Pause" : "Start"}
             </Button>
@@ -177,12 +177,12 @@ export default function Fitness() {
         <label className="text-sm font-semibold text-foreground">How many days per week?</label>
         <div className="flex gap-2 flex-wrap">
           {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-            <button key={n} onClick={() => setDaysPerWeek(n)} className="px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ background: daysPerWeek === n ? "oklch(0.62 0.12 38)" : "oklch(0.92 0.004 286.32)", color: daysPerWeek === n ? "white" : "oklch(0.55 0.020 60)" }}>
+            <button key={n} onClick={() => setDaysPerWeek(n)} className="px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ background: daysPerWeek === n ? "var(--accent)" : "oklch(0.92 0.004 286.32)", color: daysPerWeek === n ? "white" : "oklch(0.55 0.020 60)" }}>
               {n}
             </button>
           ))}
         </div>
-        <Button onClick={handleGeneratePlan} disabled={weeklyPlanLoading} className="w-full" style={{ background: "oklch(0.62 0.12 38)" }}>
+        <Button onClick={handleGeneratePlan} disabled={weeklyPlanLoading} className="w-full" style={{ background: "var(--accent)" }}>
           {weeklyPlanLoading ? <Loader2 size={16} className="mr-2 animate-spin" /> : null}
           {weeklyPlanLoading ? "Generating..." : "Generate Weekly Plan"}
         </Button>
@@ -200,7 +200,7 @@ export default function Fitness() {
               <Card key={dayIdx} className="overflow-hidden border border-border">
                 <button onClick={() => setExpandedDay(isExpanded ? null : dayIdx)} className="w-full p-4 flex items-center justify-between hover:bg-secondary transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "oklch(0.62 0.12 38 / 0.10)" }}>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "color-mix(in oklch, var(--accent) 10%, transparent)" }}>
                       <span className="text-sm font-bold text-orange-700">{dayIdx}</span>
                     </div>
                     <div className="text-left">
@@ -227,7 +227,7 @@ export default function Fitness() {
                                 <Input value={editValues.duration || ""} onChange={(e) => setEditValues({ ...editValues, duration: e.target.value })} placeholder="Duration" className="text-sm" />
                               </div>
                               <div className="flex gap-2">
-                                <Button size="sm" onClick={handleSaveEdit} className="flex-1" style={{ background: "oklch(0.62 0.12 38)" }}>
+                                <Button size="sm" onClick={handleSaveEdit} className="flex-1" style={{ background: "var(--accent)" }}>
                                   Save
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={() => setEditingExerciseId(null)} className="flex-1">
@@ -239,7 +239,7 @@ export default function Fitness() {
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <button onClick={() => toggleExerciseCompletion(ex.id)} className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all" style={{ borderColor: ex.completed ? "oklch(0.62 0.12 38)" : "oklch(0.88 0.020 72)", background: ex.completed ? "oklch(0.62 0.12 38)" : "transparent" }}>
+                                  <button onClick={() => toggleExerciseCompletion(ex.id)} className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all" style={{ borderColor: ex.completed ? "var(--accent)" : "oklch(0.88 0.020 72)", background: ex.completed ? "var(--accent)" : "transparent" }}>
                                     {ex.completed && <Check size={14} className="text-white" />}
                                   </button>
                                   <p className={`font-semibold ${ex.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{ex.name}</p>
@@ -271,7 +271,7 @@ export default function Fitness() {
                           <Input value={newExercise.duration} onChange={(e) => setNewExercise({ ...newExercise, duration: e.target.value })} placeholder="Min" className="text-sm" />
                         </div>
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleAddCustomExercise(dayIdx)} className="flex-1" style={{ background: "oklch(0.62 0.12 38)" }}>
+                          <Button size="sm" onClick={() => handleAddCustomExercise(dayIdx)} className="flex-1" style={{ background: "var(--accent)" }}>
                             Add
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => setAddingToDay(null)} className="flex-1">

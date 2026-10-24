@@ -16,7 +16,7 @@ import {
 
 const INK = "oklch(0.25 0.025 50)";
 const MUTED = "oklch(0.55 0.020 60)";
-const ACCENT = "oklch(0.62 0.12 38)";
+const ACCENT = "var(--accent)";
 const CALM = "oklch(0.58 0.09 260)";
 const CARD = "oklch(0.99 0.010 78)";
 const font = "'DM Sans', sans-serif";
@@ -108,7 +108,7 @@ export default function MindCard() {
       {insights.length > 0 && (
         <div className="flex flex-col gap-2 mt-3">
           {insights.map((i) => (
-            <div key={i.text} className="flex gap-2" style={{ padding: "9px 11px", borderRadius: 12, background: i.tone === "warn" ? "oklch(0.62 0.12 38 / 0.08)" : "oklch(0.58 0.09 260 / 0.08)" }}>
+            <div key={i.text} className="flex gap-2" style={{ padding: "9px 11px", borderRadius: 12, background: i.tone === "warn" ? "color-mix(in oklch, var(--accent) 8%, transparent)" : "oklch(0.58 0.09 260 / 0.08)" }}>
               <span style={{ fontSize: 15 }}>{i.icon}</span>
               <p style={{ fontSize: 12.5, color: INK, fontFamily: font, lineHeight: 1.45 }}>{i.text}</p>
             </div>

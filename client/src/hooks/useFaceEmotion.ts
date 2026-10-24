@@ -4,7 +4,9 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { FilesetResolver, FaceLandmarker } from "@mediapipe/tasks-vision";
-import { faceToMood, type MoodRead } from "@/lib/emotion";
+import { faceToMood, calibrate, averageBlendshapes, type Blendshapes, type MoodRead } from "@/lib/emotion";
+
+const CALIBRATION_FRAMES = 15; // ~1.5 s at 10 fps
 
 const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
@@ -25,13 +27,16 @@ function getFaceLandmarker() {
   return landmarkerPromise;
 }
 
-export type FaceStatus = "off" | "loading" | "live" | "no_face" | "error";
+export type FaceStatus = "off" | "loading" | "calibrating" | "live" | "no_face" | "error";
 
 export function useFaceEmotion(enabled: boolean) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [status, setStatus] = useState<FaceStatus>("off");
   const [read, setRead] = useState<MoodRead | null>(null);
   const smooth = useRef<MoodRead | null>(null);
+  const calib = useRef<{ frames: Blendshapes[]; neutral: Blendshapes | null }>({ frames: [], neutral: null });
+  /** Re-learn the user's neutral face (e.g. new lighting or position). */
+  const recalibrate = () => { calib.current = { frames: [], neutral: null }; smooth.current = null; setRead(null); };
 
   useEffect(() => {
     if (!enabled) { setStatus("off"); setRead(null); smooth.current = null; return; }
@@ -53,7 +58,8 @@ export function useFaceEmotion(enabled: boolean) {
         const video = videoRef.current!;
         video.srcObject = s;
         await video.play();
-        setStatus("live");
+        calib.current = { frames: [], neutral: null };
+        setStatus("calibrating");
 
         const tick = (now: number) => {
           raf = requestAnimationFrame(tick);
@@ -62,9 +68,15 @@ export function useFaceEmotion(enabled: boolean) {
           const res = lm.detectForVideo(video, now);
           const cats = res.faceBlendshapes?.[0]?.categories;
           if (!cats) { if (now - lastUi > 500) { setStatus("no_face"); lastUi = now; } return; }
-          const b: Record<string, number> = {};
+          const b: Blendshapes = {};
           for (const c of cats) b[c.categoryName] = c.score;
-          const m = faceToMood(b);
+          // First ~1.5 s: learn this person's relaxed face
+          if (!calib.current.neutral) {
+            calib.current.frames.push(b);
+            if (calib.current.frames.length >= CALIBRATION_FRAMES) calib.current.neutral = averageBlendshapes(calib.current.frames);
+            else { if (now - lastUi > 250) { setStatus("calibrating"); lastUi = now; } return; }
+          }
+          const m = faceToMood(calibrate(b, calib.current.neutral));
           const prev = smooth.current;
           // Exponential smoothing so a blink or half-second grin doesn't swing the read
           smooth.current = prev ? { valence: prev.valence * 0.85 + m.valence * 0.15, arousal: prev.arousal * 0.85 + m.arousal * 0.15 } : m;
@@ -84,5 +96,5 @@ export function useFaceEmotion(enabled: boolean) {
     };
   }, [enabled]);
 
-  return { videoRef, status, read };
+  return { videoRef, status, read, recalibrate };
 }

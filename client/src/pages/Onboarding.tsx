@@ -10,6 +10,8 @@ import {
 } from "@/contexts/AppContext";
 import { ChevronRight, Leaf } from "lucide-react";
 import { LIFE_STAGES, NO_CYCLE_OPTIONS, NoCycleReason } from "@/lib/lifeStage";
+import type { HormoneContext } from "@/lib/hormones";
+import HormoneConsent from "@/components/HormoneConsent";
 
 const GOALS: { id: FitnessGoal; label: string; desc: string; emoji: string }[] = [
   { id: "lose_weight",      label: "Lose Weight",     desc: "Burn fat, feel lighter",         emoji: "🔥" },
@@ -68,12 +70,12 @@ function MultiSelectGrid<T extends string>({
             style={{
               display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3,
               padding: "11px 13px", borderRadius: 14, textAlign: "left", position: "relative",
-              border: isSelected ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)",
-              background: isSelected ? "oklch(0.62 0.12 38 / 0.10)" : "oklch(0.99 0.010 78)",
-              transition: "all 0.15s", boxShadow: isSelected ? "0 3px 10px oklch(0.62 0.12 38 / 0.15)" : "0 1px 4px oklch(0.25 0.025 50 / 0.05)",
+              border: isSelected ? "2px solid var(--accent)" : "1.5px solid oklch(0.88 0.020 72)",
+              background: isSelected ? "color-mix(in oklch, var(--accent) 10%, transparent)" : "oklch(0.99 0.010 78)",
+              transition: "all 0.15s", boxShadow: isSelected ? "0 3px 10px color-mix(in oklch, var(--accent) 15%, transparent)" : "0 1px 4px oklch(0.25 0.025 50 / 0.05)",
             }}>
             {isSelected && (
-              <div style={{ position: "absolute", top: 7, right: 7, width: 15, height: 15, borderRadius: "50%", background: "oklch(0.62 0.12 38)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ position: "absolute", top: 7, right: 7, width: 15, height: 15, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
             )}
@@ -118,7 +120,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const [healthConditions, setHealthConditions] = useState<HealthCondition[]>(["none"]);
   const [noCycleReason, setNoCycleReason] = useState<NoCycleReason | null>(null);
   const [dueDate, setDueDate] = useState("");
-  const [hormonalContraception, setHormonalContraception] = useState(false);
+  const [hormones, setHormones] = useState<HormoneContext | undefined>(undefined);
   const [menoLastPeriod, setMenoLastPeriod] = useState("");
   const isMeno = noCycleReason === "menopause" || noCycleReason === "perimenopause";
 
@@ -159,7 +161,8 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                 // Menopause staging needs the real last period (blank = unknown), not the cycling default
                 ...(isMeno ? { lastPeriodDate: menoLastPeriod } : {}),
               }
-            : { hormonalContraception }),
+            : {}),
+          ...(hormones ? { hormones: { consented: hormones.consented, preferNotToSay: hormones.preferNotToSay, uses: hormones.uses } } : {}),
         },
       } : {}),
     });
@@ -177,7 +180,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
       <div className="relative z-10 flex flex-col flex-1 px-5 pt-10 pb-8" style={{ overflowY: "auto" }}>
         {/* Logo */}
         <div className="flex items-center gap-2 mb-5 animate-fade-up">
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "oklch(0.62 0.12 38)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px oklch(0.62 0.12 38 / 0.35)" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px color-mix(in oklch, var(--accent) 35%, transparent)" }}>
             <Leaf size={16} color="white" />
           </div>
           <div>
@@ -189,7 +192,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         {/* Progress bar */}
         <div className="flex gap-1 mb-2 animate-fade-up animate-fade-up-delay-1">
           {stepLabels.map((_, i) => (
-            <div key={i} style={{ flex: i === step ? 3 : 1, height: 5, borderRadius: 999, background: i <= step ? "oklch(0.62 0.12 38)" : "oklch(0.88 0.020 72)", transition: "all 0.3s cubic-bezier(0.23, 1, 0.32, 1)" }} />
+            <div key={i} style={{ flex: i === step ? 3 : 1, height: 5, borderRadius: 999, background: i <= step ? "var(--accent)" : "oklch(0.88 0.020 72)", transition: "all 0.3s cubic-bezier(0.23, 1, 0.32, 1)" }} />
           ))}
         </div>
         <p style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", marginBottom: 14, fontFamily: "'DM Sans', sans-serif" }}>
@@ -211,7 +214,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                 <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{label}</label>
                 <input type={type} value={value} onChange={(e) => set(e.target.value)} placeholder={ph}
                   style={{ padding: "10px 13px", borderRadius: 11, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.99 0.010 78)", fontSize: 14, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif", outline: "none" }}
-                  onFocus={(e) => (e.target.style.borderColor = "oklch(0.62 0.12 38)")}
+                  onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
                   onBlur={(e) => (e.target.style.borderColor = "oklch(0.88 0.020 72)")} />
               </div>
             ))}
@@ -221,7 +224,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               <div className="flex gap-2">
                 {([["female","Female","♀️"],["male","Male","♂️"],["prefer_not_to_say","Prefer Not to Say","—"]] as [BiologicalSex,string,string][]).map(([id, label, icon]) => (
                   <button key={id} onClick={() => setBiologicalSex(id)}
-                    style={{ flex: 1, padding: "9px 6px", borderRadius: 11, border: biologicalSex === id ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: biologicalSex === id ? "oklch(0.62 0.12 38 / 0.10)" : "oklch(0.99 0.010 78)", fontSize: 11, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
+                    style={{ flex: 1, padding: "9px 6px", borderRadius: 11, border: biologicalSex === id ? "2px solid var(--accent)" : "1.5px solid oklch(0.88 0.020 72)", background: biologicalSex === id ? "color-mix(in oklch, var(--accent) 10%, transparent)" : "oklch(0.99 0.010 78)", fontSize: 11, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
                     {icon} {label}
                   </button>
                 ))}
@@ -236,7 +239,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>What's your goal?</h1>
             {GOALS.map(({ id, label, desc, emoji }) => (
               <button key={id} onClick={() => setGoal(id)}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 15px", borderRadius: 15, border: goal === id ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: goal === id ? "oklch(0.62 0.12 38 / 0.08)" : "oklch(0.99 0.010 78)", textAlign: "left", transition: "all 0.15s" }}>
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 15px", borderRadius: 15, border: goal === id ? "2px solid var(--accent)" : "1.5px solid oklch(0.88 0.020 72)", background: goal === id ? "color-mix(in oklch, var(--accent) 8%, transparent)" : "oklch(0.99 0.010 78)", textAlign: "left", transition: "all 0.15s" }}>
                 <span style={{ fontSize: 24 }}>{emoji}</span>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 13, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
@@ -282,7 +285,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               <div className="flex gap-2">
                 {([["yes","Yes"],["no","No"],["irregular","Irregular"]] as [CycleStatus,string][]).map(([id, label]) => (
                   <button key={id} onClick={() => setCycleStatus(id)}
-                    style={{ flex: 1, padding: "8px", borderRadius: 10, border: cycleStatus === id ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: cycleStatus === id ? "oklch(0.62 0.12 38 / 0.10)" : "oklch(0.99 0.010 78)", fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
+                    style={{ flex: 1, padding: "8px", borderRadius: 10, border: cycleStatus === id ? "2px solid var(--accent)" : "1.5px solid oklch(0.88 0.020 72)", background: cycleStatus === id ? "color-mix(in oklch, var(--accent) 10%, transparent)" : "oklch(0.99 0.010 78)", fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
                     {label}
                   </button>
                 ))}
@@ -298,7 +301,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                     const on = noCycleReason === id;
                     return (
                       <button key={id} onClick={() => setNoCycleReason(id)}
-                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", borderRadius: 13, textAlign: "left", border: on ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: on ? "oklch(0.62 0.12 38 / 0.08)" : "oklch(0.99 0.010 78)", transition: "all 0.15s" }}>
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", borderRadius: 13, textAlign: "left", border: on ? "2px solid var(--accent)" : "1.5px solid oklch(0.88 0.020 72)", background: on ? "color-mix(in oklch, var(--accent) 8%, transparent)" : "oklch(0.99 0.010 78)", transition: "all 0.15s" }}>
                         <span style={{ fontSize: 20 }}>{info.emoji}</span>
                         <span style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{info.label}</span>
                       </button>
@@ -328,15 +331,11 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               </div>
             )}
 
+            {/* Contraception / fertility / hormone therapy, with consent */}
+            <HormoneConsent value={hormones} onChange={setHormones} />
+
             {cycleStatus !== "no" && (
               <>
-                {/* Hormonal contraception */}
-                <button onClick={() => setHormonalContraception((v) => !v)}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 13px", borderRadius: 12, border: hormonalContraception ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: hormonalContraception ? "oklch(0.62 0.12 38 / 0.08)" : "oklch(0.99 0.010 78)", textAlign: "left" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>💊 I use hormonal birth control (pill, implant, hormonal IUD)</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: hormonalContraception ? "oklch(0.62 0.12 38)" : "oklch(0.65 0.015 60)" }}>{hormonalContraception ? "Yes" : "No"}</span>
-                </button>
-
                 {/* Last period date */}
                 <div className="flex flex-col gap-1">
                   <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Last Period Start Date</label>
@@ -348,10 +347,10 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between">
                     <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Average Cycle Length</label>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "oklch(0.62 0.12 38)", fontFamily: "'DM Sans', sans-serif" }}>{cycleLength} days</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", fontFamily: "'DM Sans', sans-serif" }}>{cycleLength} days</span>
                   </div>
                   <input type="range" min={21} max={40} value={cycleLength} onChange={(e) => setCycleLength(Number(e.target.value))}
-                    style={{ width: "100%", accentColor: "oklch(0.62 0.12 38)" }} />
+                    style={{ width: "100%", accentColor: "var(--accent)" }} />
                   <div className="flex justify-between">
                     <span style={{ fontSize: 10, color: "oklch(0.65 0.015 60)", fontFamily: "'DM Sans', sans-serif" }}>21 days</span>
                     <span style={{ fontSize: 10, color: "oklch(0.65 0.015 60)", fontFamily: "'DM Sans', sans-serif" }}>40 days</span>
@@ -364,7 +363,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                   <div className="flex flex-wrap gap-2">
                     {PMS_SYMPTOMS.map(({ id, label, emoji }) => (
                       <button key={id} onClick={() => toggleSymptom(id)}
-                        style={{ padding: "5px 11px", borderRadius: 999, border: commonSymptoms.includes(id) ? "none" : "1.5px solid oklch(0.88 0.020 72)", background: commonSymptoms.includes(id) ? "oklch(0.62 0.12 38)" : "oklch(0.99 0.010 78)", color: commonSymptoms.includes(id) ? "white" : "oklch(0.45 0.025 50)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
+                        style={{ padding: "5px 11px", borderRadius: 999, border: commonSymptoms.includes(id) ? "none" : "1.5px solid oklch(0.88 0.020 72)", background: commonSymptoms.includes(id) ? "var(--accent)" : "oklch(0.99 0.010 78)", color: commonSymptoms.includes(id) ? "white" : "oklch(0.45 0.025 50)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
                         {emoji} {label}
                       </button>
                     ))}
@@ -391,7 +390,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         {/* ── Ready step ── */}
         {step === readyStep && (
           <div className="flex flex-col items-center justify-center flex-1 gap-5 animate-fade-up animate-fade-up-delay-2">
-            <div style={{ width: 88, height: 88, borderRadius: "50%", background: "oklch(0.62 0.12 38 / 0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 88, height: 88, borderRadius: "50%", background: "color-mix(in oklch, var(--accent) 12%, transparent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ fontSize: 42 }}>🌱</span>
             </div>
             <div style={{ textAlign: "center" }}>
@@ -403,7 +402,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               </p>
               <div className="flex flex-wrap gap-2 justify-center mt-4">
                 {[...equipment, ...workoutStyles].map((tag) => (
-                  <span key={tag} style={{ padding: "3px 9px", borderRadius: 999, background: "oklch(0.62 0.12 38 / 0.10)", color: "oklch(0.50 0.10 38)", fontSize: 10, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>
+                  <span key={tag} style={{ padding: "3px 9px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 10%, transparent)", color: "oklch(0.50 0.10 38)", fontSize: 10, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>
                     {tag.replace(/_/g, " ")}
                   </span>
                 ))}
@@ -414,7 +413,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
 
         {/* CTA */}
         <button onClick={handleNext} className="flex items-center justify-center gap-2 mt-5"
-          style={{ padding: "14px 24px", borderRadius: 15, background: "oklch(0.62 0.12 38)", color: "white", fontWeight: 600, fontSize: 15, fontFamily: "'DM Sans', sans-serif", border: "none", boxShadow: "0 6px 20px oklch(0.62 0.12 38 / 0.35)" }}>
+          style={{ padding: "14px 24px", borderRadius: 15, background: "var(--accent)", color: "white", fontWeight: 600, fontSize: 15, fontFamily: "'DM Sans', sans-serif", border: "none", boxShadow: "0 6px 20px color-mix(in oklch, var(--accent) 35%, transparent)" }}>
           {step < readyStep ? "Continue" : "Start My Journey"} <ChevronRight size={17} />
         </button>
       </div>

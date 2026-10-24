@@ -3,7 +3,7 @@
  * One memoised place for every page (Dashboard, Cycle, Progress) to read the same numbers.
  */
 import { useMemo } from "react";
-import { useApp, hasActiveCycle, CyclePhase } from "@/contexts/AppContext";
+import { useApp, tracksOvulation, CyclePhase } from "@/contexts/AppContext";
 import { toDaily, DailyPhysiology } from "@/lib/whoop/types";
 import {
   cycleWindows, detectOvulationHistory, phaseMap, cycleAdjustedRecovery, stressScore, energyScore,
@@ -51,7 +51,7 @@ export function useHealthInsights(): HealthInsights {
     const wh = profile.womensHealth;
 
     let cycle: HealthInsights["cycle"] = null;
-    if (hasActiveCycle(profile) && wh && !wh.hormonalContraception) {
+    if (tracksOvulation(profile) && wh) {
       const starts = [wh.lastPeriodDate, ...periodLog.map((p) => p.startDate)];
       const windows = cycleWindows(starts, wh.cycleLength, today?.date ?? isoDay(new Date()), days.length);
       const ovulations = detectOvulationHistory(days, windows);
