@@ -12,6 +12,8 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import WellnessCheckIn from "@/components/WellnessCheckIn";
+import PrivacyCard from "@/components/PrivacyCard";
+import MindCard from "@/components/MindCard";
 
 const CHART_TABS = ["Calories", "Protein", "Steps"];
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -162,6 +164,7 @@ export default function Progress() {
 
       <div className="flex flex-col gap-4 px-4">
         {/* Wellness Check-In */}
+        <MindCard />
         <WellnessCheckIn />
 
         {/* Nutrition score */}
@@ -390,6 +393,8 @@ export default function Progress() {
             </ResponsiveContainer>
           )}
         </div>
+
+        <PrivacyCard />
       </div>
     </div>
   );

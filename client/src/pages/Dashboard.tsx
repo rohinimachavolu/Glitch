@@ -1,5 +1,5 @@
 /**
- * NutriSense AI — Dashboard (Home Tab)
+ * Glitch — Dashboard (Home Tab)
  * Design: Organic Wellness Journal — warm cream, terracotta rings, sage micro bars
  * All nutrition targets come from AI-generated nutritionGoals in AppContext.
  */
@@ -10,6 +10,8 @@ import MicroBar from "@/components/MicroBar";
 import { Flame, Loader2 } from "lucide-react";
 import { getMotivationalMessage } from "@/lib/aiService";
 import SupplementLogger from "@/components/SupplementLogger";
+import BodyStatusCard from "@/components/BodyStatusCard";
+import AppraisalCheckIn from "@/components/AppraisalCheckIn";
 
 const MACRO_COLORS = {
   cal:     "oklch(0.62 0.12 38)",
@@ -159,6 +161,9 @@ export default function Dashboard() {
       </div>
 
       <div className="flex flex-col gap-4 px-4 pt-2">
+        <AppraisalCheckIn />
+        <BodyStatusCard />
+
         {/* Macro rings */}
         <div
           className="animate-fade-up animate-fade-up-delay-1"

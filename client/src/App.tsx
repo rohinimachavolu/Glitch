@@ -17,21 +17,28 @@ import Fitness from "./pages/Fitness";
 import FormCoach from "./pages/FormCoach";
 import WomensHealth from "./pages/WomensHealth";
 import Progress from "./pages/Progress";
+import CoachChat, { CoachFab } from "./components/CoachChat";
 
 function AppShell() {
-  const { profile } = useApp();
+  const { profile, hydrated } = useApp();
   const [activeTab, setActiveTab] = useState("home");
-  const [onboarded, setOnboarded] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false);
 
-  if (!onboarded || !profile) {
+  // Wait for encrypted saved data to be restored before deciding whether to onboard
+  if (!hydrated) {
+    return <div className="phone-shell" style={{ minHeight: "100dvh" }} />;
+  }
+
+  if (!profile) {
     return (
       <div className="phone-shell">
-        <Onboarding onDone={() => setOnboarded(true)} />
+        <Onboarding onDone={() => setActiveTab("home")} />
       </div>
     );
   }
 
-  const isFemale = profile.biologicalSex === "female" && !!profile.womensHealth && profile.womensHealth.cycleStatus !== "no";
+  // Cycle tab covers life stages too (pregnancy, menopause…), so show it for all female profiles
+  const isFemale = profile.biologicalSex === "female" && !!profile.womensHealth;
 
   const pages: Record<string, React.ReactNode> = {
     home:     <Dashboard />,
@@ -48,6 +55,8 @@ function AppShell() {
         {pages[activeTab] ?? <Dashboard />}
       </div>
       <BottomNav active={activeTab} onChange={setActiveTab} isFemale={isFemale} />
+      {!coachOpen && activeTab !== "form" && <CoachFab onOpen={() => setCoachOpen(true)} />}
+      <CoachChat open={coachOpen} onClose={() => setCoachOpen(false)} />
     </div>
   );
 }

@@ -1,14 +1,15 @@
 /**
  * NutriSense AI — Groq AI Service Layer
- * Text tasks: llama-3.3-70b-versatile (fast, accurate, JSON-capable)
- * Vision tasks: meta-llama/llama-4-scout-17b-16e-instruct (food photo analysis)
+ * Text tasks: openai/gpt-oss-120b (JSON-capable)
+ * Vision tasks: qwen/qwen3.8-27b (food photo analysis)
+ * Override with VITE_GROQ_TEXT_MODEL / VITE_GROQ_VISION_MODEL when Groq retires a model.
  * Base URL: https://api.groq.com/openai/v1
  */
 
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 const GROQ_KEY  = import.meta.env.VITE_GROQ_API_KEY as string;
-const TEXT_MODEL   = "llama-3.3-70b-versatile";
-const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const TEXT_MODEL   = (import.meta.env.VITE_GROQ_TEXT_MODEL as string) || "openai/gpt-oss-120b";
+const VISION_MODEL = (import.meta.env.VITE_GROQ_VISION_MODEL as string) || "qwen/qwen3.8-27b";
 
 // ── Generic text chat (JSON output) ──────────────────────────
 async function chat(
@@ -25,7 +26,8 @@ async function chat(
       model: TEXT_MODEL,
       messages,
       temperature: 0.3,
-      max_tokens: 1200,
+      // Reasoning models spend part of the budget thinking before the JSON
+      max_tokens: 3000,
       ...(json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
@@ -60,7 +62,7 @@ async function visionChat(
         },
       ],
       temperature: 0.2,
-      max_tokens: 600,
+      max_tokens: 2000,
     }),
   });
   if (!res.ok) {
@@ -74,6 +76,8 @@ async function visionChat(
 // ── Safe JSON parse helper ────────────────────────────────────
 function safeParseJSON<T>(raw: string, fallback: T): T {
   try {
+    // Reasoning models may prepend <think>…</think>; drop it before looking for JSON
+    raw = raw.replace(/<think>[\s\S]*?<\/think>/g, "");
     // Extract JSON block if wrapped in markdown code fences
     const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/) ?? raw.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
     const jsonStr = match ? match[1] ?? match[0] : raw;
@@ -106,6 +110,8 @@ export async function generateNutritionGoals(profile: {
   weight: number;
   height: number;
   goal: string;
+  /** e.g. "pregnant" — stages where a calorie deficit is unsafe set allowCalorieDeficit=false */
+  lifeStage?: { label: string; allowCalorieDeficit: boolean };
 }): Promise<NutritionGoals> {
   const goalLabels: Record<string, string> = {
     lose_weight:     "lose weight and reduce body fat",
@@ -113,10 +119,14 @@ export async function generateNutritionGoals(profile: {
     build_muscle:    "build lean muscle mass",
     manage_diabetes: "manage Type 2 diabetes and control blood sugar",
   };
-  const goalDesc = goalLabels[profile.goal] ?? profile.goal;
+  const noDeficit = profile.lifeStage?.allowCalorieDeficit === false;
+  // Weight loss is never targeted when a deficit is unsafe (pregnancy, postpartum, pre-menarche)
+  const goalDesc = noDeficit && profile.goal === "lose_weight"
+    ? goalLabels.maintain
+    : goalLabels[profile.goal] ?? profile.goal;
 
   const fallback: NutritionGoals = {
-    calorieTarget: profile.goal === "build_muscle" ? 2200 : profile.goal === "manage_diabetes" ? 1900 : profile.goal === "maintain" ? 2050 : 1750,
+    calorieTarget: profile.goal === "build_muscle" ? 2200 : profile.goal === "manage_diabetes" ? 1900 : profile.goal === "maintain" || noDeficit ? 2050 : 1750,
     proteinTarget: Math.round((profile.weight * 1.8) || 90),
     carbsTarget: profile.goal === "manage_diabetes" ? 180 : 220,
     fatsTarget: profile.goal === "build_muscle" ? 65 : 55,
@@ -133,7 +143,7 @@ export async function generateNutritionGoals(profile: {
     const prompt = `You are a certified nutritionist. Calculate precise daily nutrition targets for this user.
 
 User: ${profile.name}, Age ${profile.age}, Weight ${profile.weight}kg, Height ${profile.height}cm
-Goal: ${goalDesc}
+Goal: ${goalDesc}${profile.lifeStage ? `\nLife stage: ${profile.lifeStage.label}` : ""}${noDeficit ? "\nIMPORTANT: Do NOT apply any calorie deficit for this life stage. Use TDEE or higher." : ""}
 
 Use Mifflin-St Jeor BMR × 1.55 activity multiplier, then adjust for goal:
 - Weight loss: -500 kcal deficit
@@ -345,4 +355,37 @@ export async function getMotivationalMessage(profile: {
     console.warn("Motivational message generation failed, using local fallback:", error);
     return "Keep going — your plan is working.";
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Appraisal coaching — warm re-wording only
+// The strategy is chosen by the deterministic engine in lib/appraisal.ts; the model may only
+// phrase it. No name or identifiers are sent.
+// ─────────────────────────────────────────────────────────────
+export async function phraseCoaching(ctx: {
+  stateLabel: string;
+  insight: string;
+  strategyTitle: string;
+  note?: string;
+}): Promise<string | null> {
+  try {
+    const prompt = `You are a warm, non-judgmental wellness coach. The user checked in feeling: "${ctx.stateLabel}".
+Context: ${ctx.insight}
+${ctx.note ? `They wrote: "${ctx.note.slice(0, 200)}"\n` : ""}The coaching strategy already chosen for them is: "${ctx.strategyTitle}".
+Write ONE or TWO short sentences (max 35 words) that validate how they feel and encourage them to try that strategy.
+Rules: never shame, never mention calories or weight, never give medical advice, don't suggest a different strategy.
+Return ONLY the message text.`;
+    const text = (await chat([{ role: "user", content: prompt }], false)).replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    return text || null;
+  } catch (error) {
+    console.warn("Coaching phrasing failed, using engine text:", error);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Conversational coach — multi-turn, JSON (see lib/coachAgent.ts)
+// ─────────────────────────────────────────────────────────────
+export async function coachCompletion(messages: { role: "system" | "user" | "assistant"; content: string }[]): Promise<string> {
+  return chat(messages, true);
 }

@@ -108,6 +108,7 @@ export default function LogFood() {
       fiber:    Math.round((analyzed.fiber   + addonTotals.fiber)  * 10) / 10,
       omega3:   Math.round((analyzed.omega3  + addonTotals.omega3) * 10) / 10,
       time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+      loggedAt: new Date().toISOString(),
     };
 
     addMeal(meal);

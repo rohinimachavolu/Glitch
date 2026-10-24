@@ -1,5 +1,5 @@
 /**
- * NutriSense AI — Women's Health & Cycle Intelligence Tab
+ * Glitch — Women's Health & Cycle Intelligence Tab
  * Design: Organic Wellness Journal — warm rose + terracotta + sage
  * Disclaimer: Cycle predictions are estimates, not medical advice.
  */
@@ -11,6 +11,10 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { Loader2 } from "lucide-react";
+import { useHealthInsights } from "@/hooks/useHealthInsights";
+import OvulationCard from "@/components/OvulationCard";
+import LifeStagePanel from "@/components/LifeStagePanel";
+import MenopausePanel from "@/components/MenopausePanel";
 
 const PHASE_INFO: Record<CyclePhase, { label: string; color: string; bg: string; emoji: string; desc: string }> = {
   menstrual:  { label: "Menstrual",  color: "oklch(0.62 0.12 38)",  bg: "oklch(0.62 0.12 38 / 0.12)",  emoji: "🌑", desc: "Rest, restore, and be gentle with yourself." },
@@ -183,7 +187,9 @@ function getStressRecovery(entry: CycleSymptomEntry, completedCount: number): { 
 export default function WomensHealth() {
   const { profile, cycleSymptomLog, addCycleSymptomEntry, logPeriodStart, completedExercises } = useApp();
   const wh = profile?.womensHealth;
+  const insights = useHealthInsights();
   const [activeSection, setActiveSection] = useState<"overview" | "checkin" | "insights" | "analytics">("overview");
+  const [periWatch, setPeriWatch] = useState(false);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [insightLoading, setInsightLoading] = useState(false);
 
@@ -192,7 +198,20 @@ export default function WomensHealth() {
   const [notes, setNotes] = useState("");
   const [checkedIn, setCheckedIn] = useState(false);
 
-  if (!profile || !wh || wh.cycleStatus === "no") {
+  if (profile && wh && wh.cycleStatus === "no") {
+    const meno = wh.noCycleReason === "menopause" || wh.noCycleReason === "perimenopause";
+    return (
+      <div className="flex flex-col gap-0 pb-2">
+        <div style={{ padding: "20px 20px 4px" }}>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>{meno ? "Menopause Hub" : "Your Hormonal Health"}</h1>
+          <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>{meno ? `Symptoms, sleep, training and heart health, ${profile.name}` : `Guidance for your life stage, ${profile.name}`}</p>
+        </div>
+        {meno ? <MenopausePanel /> : <LifeStagePanel />}
+      </div>
+    );
+  }
+
+  if (!profile || !wh) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 px-6" style={{ minHeight: "60vh" }}>
         <span style={{ fontSize: 48 }}>🌸</span>
@@ -206,8 +225,9 @@ export default function WomensHealth() {
     );
   }
 
-  const cycleDay = getCycleDay(wh.lastPeriodDate);
-  const phase = getCyclePhase(cycleDay, wh.cycleLength);
+  const cycleDay = getCycleDay(wh.lastPeriodDate, wh.cycleLength);
+  // Prefer the phase confirmed from WHOOP temperature data over the calendar estimate
+  const phase = insights.cycle?.currentPhase ?? getCyclePhase(cycleDay, wh.cycleLength);
   const phaseInfo = PHASE_INFO[phase];
   const nutrition = NUTRITION_GUIDANCE[phase];
   const fitness = FITNESS_GUIDANCE[phase];
@@ -311,6 +331,18 @@ export default function WomensHealth() {
                 </div>
               </div>
             </div>
+
+            <OvulationCard />
+
+            {/* 40+: perimenopause can start while cycles continue */}
+            {profile.age >= 40 && (
+              <button onClick={() => setPeriWatch((v) => !v)}
+                style={{ width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: 18, border: "1.5px solid oklch(0.63 0.17 35 / 0.35)", background: "oklch(0.63 0.17 35 / 0.06)" }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>🌗 Perimenopause watch {periWatch ? "▲" : "▼"}</p>
+                <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>Cycle changes, hot flashes, night sweats and training for your 40s+</p>
+              </button>
+            )}
+            {profile.age >= 40 && periWatch && <div style={{ margin: "0 -16px" }}><MenopausePanel /></div>}
 
             {/* Period calendar */}
             <PeriodCalendar lastPeriodDate={wh.lastPeriodDate} cycleLength={wh.cycleLength} />

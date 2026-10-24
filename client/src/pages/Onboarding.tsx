@@ -1,5 +1,5 @@
 /**
- * NutriSense AI — Onboarding (up to 7 steps)
+ * Glitch — Onboarding (up to 7 steps)
  * Steps: Personal Info → Goal → Equipment → Workout Style → [Women's Health if female] → Ready
  * Design: Organic Wellness Journal
  */
@@ -9,6 +9,7 @@ import {
   BiologicalSex, CycleStatus, PmsSymptom, HealthCondition,
 } from "@/contexts/AppContext";
 import { ChevronRight, Leaf } from "lucide-react";
+import { LIFE_STAGES, NO_CYCLE_OPTIONS, NoCycleReason } from "@/lib/lifeStage";
 
 const GOALS: { id: FitnessGoal; label: string; desc: string; emoji: string }[] = [
   { id: "lose_weight",      label: "Lose Weight",     desc: "Burn fat, feel lighter",         emoji: "🔥" },
@@ -115,6 +116,11 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const [cycleLength, setCycleLength] = useState(28);
   const [commonSymptoms, setCommonSymptoms] = useState<PmsSymptom[]>([]);
   const [healthConditions, setHealthConditions] = useState<HealthCondition[]>(["none"]);
+  const [noCycleReason, setNoCycleReason] = useState<NoCycleReason | null>(null);
+  const [dueDate, setDueDate] = useState("");
+  const [hormonalContraception, setHormonalContraception] = useState(false);
+  const [menoLastPeriod, setMenoLastPeriod] = useState("");
+  const isMeno = noCycleReason === "menopause" || noCycleReason === "perimenopause";
 
   const isFemale = biologicalSex === "female";
   // Steps: 0=Info, 1=Goal, 2=Equipment, 3=Style, [4=Women's if female], last=Ready
@@ -137,13 +143,24 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     if (step === 0 && (!name || !age || !weight || !height)) return;
     if (step === 2 && equipment.length === 0) return;
     if (step === 3 && workoutStyles.length === 0) return;
+    if (step === womensStep && isFemale && cycleStatus === "no" && !noCycleReason) return;
     if (step < readyStep) { setStep(step + 1); return; }
     // Final step — submit
     setProfile({
       name, age: Number(age), weight: Number(weight), height: Number(height),
       goal, equipment, workoutStyles, biologicalSex,
-      ...(isFemale && cycleStatus !== "no" ? {
-        womensHealth: { cycleStatus, lastPeriodDate, cycleLength, commonSymptoms, healthConditions },
+      ...(isFemale ? {
+        womensHealth: {
+          cycleStatus, lastPeriodDate, cycleLength, commonSymptoms, healthConditions,
+          ...(cycleStatus === "no"
+            ? {
+                noCycleReason: noCycleReason ?? "other",
+                ...(noCycleReason === "pregnant" && dueDate ? { dueDate } : {}),
+                // Menopause staging needs the real last period (blank = unknown), not the cycling default
+                ...(isMeno ? { lastPeriodDate: menoLastPeriod } : {}),
+              }
+            : { hormonalContraception }),
+        },
       } : {}),
     });
     onDone();
@@ -164,8 +181,8 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
             <Leaf size={16} color="white" />
           </div>
           <div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: "oklch(0.25 0.025 50)" }}>NutriSense AI</div>
-            <div style={{ fontSize: 10, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>Your wellness companion</div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: "oklch(0.25 0.025 50)" }}>Glitch</div>
+            <div style={{ fontSize: 10, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>Find the bug. Fix your health.</div>
           </div>
         </div>
 
@@ -256,7 +273,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
           <div className="flex flex-col gap-4 flex-1 animate-fade-up animate-fade-up-delay-2">
             <div>
               <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>Women's Health Profile</h1>
-              <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif", marginTop: 3 }}>This helps us give you cycle-aware nutrition and fitness guidance.</p>
+              <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif", marginTop: 3 }}>This helps us give you cycle-aware nutrition and fitness guidance. Encrypted and stored only on your device.</p>
             </div>
 
             {/* Cycle status */}
@@ -272,8 +289,54 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               </div>
             </div>
 
+            {cycleStatus === "no" && (
+              <div className="flex flex-col gap-2">
+                <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Which best describes you right now?</label>
+                <div className="flex flex-col gap-2">
+                  {NO_CYCLE_OPTIONS.map((id) => {
+                    const info = LIFE_STAGES[id];
+                    const on = noCycleReason === id;
+                    return (
+                      <button key={id} onClick={() => setNoCycleReason(id)}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", borderRadius: 13, textAlign: "left", border: on ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: on ? "oklch(0.62 0.12 38 / 0.08)" : "oklch(0.99 0.010 78)", transition: "all 0.15s" }}>
+                        <span style={{ fontSize: 20 }}>{info.emoji}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{info.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {noCycleReason === "pregnant" && (
+                  <div className="flex flex-col gap-1">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Due date (optional)</label>
+                    <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
+                      style={{ padding: "10px 13px", borderRadius: 11, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.99 0.010 78)", fontSize: 14, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif", outline: "none", width: "100%" }} />
+                  </div>
+                )}
+                {isMeno && (
+                  <div className="flex flex-col gap-1">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>When was your last period? (a rough guess is fine)</label>
+                    <input type="date" value={menoLastPeriod} max={new Date().toISOString().split("T")[0]} onChange={(e) => setMenoLastPeriod(e.target.value)}
+                      style={{ padding: "10px 13px", borderRadius: 11, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.99 0.010 78)", fontSize: 14, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif", outline: "none", width: "100%" }} />
+                    <p style={{ fontSize: 10.5, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>Used to place you on the menopause timeline and spot early menopause.</p>
+                  </div>
+                )}
+                {noCycleReason && (
+                  <div style={{ padding: "10px 12px", borderRadius: 11, background: "oklch(0.72 0.08 148 / 0.12)", border: "1px solid oklch(0.72 0.08 148 / 0.3)" }}>
+                    <p style={{ fontSize: 11, color: "oklch(0.40 0.06 148)", fontFamily: "'DM Sans', sans-serif" }}>💡 {LIFE_STAGES[noCycleReason].summary}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {cycleStatus !== "no" && (
               <>
+                {/* Hormonal contraception */}
+                <button onClick={() => setHormonalContraception((v) => !v)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 13px", borderRadius: 12, border: hormonalContraception ? "2px solid oklch(0.62 0.12 38)" : "1.5px solid oklch(0.88 0.020 72)", background: hormonalContraception ? "oklch(0.62 0.12 38 / 0.08)" : "oklch(0.99 0.010 78)", textAlign: "left" }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>💊 I use hormonal birth control (pill, implant, hormonal IUD)</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: hormonalContraception ? "oklch(0.62 0.12 38)" : "oklch(0.65 0.015 60)" }}>{hormonalContraception ? "Yes" : "No"}</span>
+                </button>
+
                 {/* Last period date */}
                 <div className="flex flex-col gap-1">
                   <label style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>Last Period Start Date</label>
@@ -336,6 +399,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 8, lineHeight: 1.6, fontFamily: "'DM Sans', sans-serif" }}>
                 Our AI is building your personalized nutrition targets and workout plan.
                 {isFemale && cycleStatus !== "no" && " Cycle-aware recommendations are enabled."}
+                {isFemale && cycleStatus === "no" && noCycleReason && ` Guidance is tailored for: ${LIFE_STAGES[noCycleReason].label.toLowerCase()}.`}
               </p>
               <div className="flex flex-wrap gap-2 justify-center mt-4">
                 {[...equipment, ...workoutStyles].map((tag) => (
