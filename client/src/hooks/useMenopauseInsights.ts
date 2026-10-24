@@ -2,7 +2,7 @@
  * Glitch — menopause insights: stage, night sweats, hot-flash triggers, training and clinician points.
  */
 import { useMemo } from "react";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, bodyKind } from "@/contexts/AppContext";
 import { useHealthInsights } from "./useHealthInsights";
 import { generateDemoHotFlashes, generateDemoTriggerMeals } from "@/lib/whoop/demoData";
 import {
@@ -50,7 +50,9 @@ export function useMenopauseInsights(): MenopauseInsights | null {
       stressByDay.set(d.date, zv < -1 ? "high" : zv < -0.3 ? "moderate" : "low");
     });
 
-    const useDemo = whoop?.source === "demo" && hotFlashLog.length < 5;
+    // Demo hot flashes only make sense for peri/post-menopause profiles
+    const kind = bodyKind(profile);
+    const useDemo = whoop?.source === "demo" && hotFlashLog.length < 5 && (kind === "peri" || kind === "menopause");
     const demoMeals = useDemo ? generateDemoTriggerMeals(h.days) : [];
     const flashes = useDemo
       ? [...generateDemoHotFlashes(

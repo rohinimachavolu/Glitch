@@ -16,11 +16,11 @@ import {
 import { phraseCoaching } from "@/lib/aiService";
 import { celebrate } from "./Fun";
 
-const INK = "#F4F5F7";
-const MUTED = "#8B909A";
+const INK = "var(--ink)";
+const MUTED = "var(--txt-muted)";
 const ACCENT = "var(--accent)";
 const SAGE = "oklch(0.62 0.10 148)";
-const CARD = "#17191F";
+const CARD = "var(--card-bg)";
 const font = "'DM Sans', sans-serif";
 
 const MOODS = ["😞", "😕", "😐", "🙂", "😄"];

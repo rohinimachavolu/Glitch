@@ -18,7 +18,7 @@ const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmark
 const GOOD   = "oklch(0.72 0.08 148)";
 const ADJUST = "oklch(0.78 0.10 75)";
 const BAD    = "oklch(0.62 0.16 30)";
-const MUTED  = "#8B909A";
+const MUTED  = "var(--txt-muted)";
 
 // Shared across mounts so switching tabs doesn't re-download the model
 let landmarkerPromise: Promise<PoseLandmarker> | null = null;
@@ -54,7 +54,14 @@ export default function FormCoach() {
     exercisePlan.map((e) => matchFormExercise(e.name)).filter((id): id is NonNullable<typeof id> => !!id)
   );
 
-  const [selected, setSelected] = useState<FormExerciseDef>(FORM_EXERCISES[0]);
+  const [selected, setSelected] = useState<FormExerciseDef>(() => {
+    // If a bone-health exercise was just added, open Form Coach already on that move.
+    try {
+      const want = localStorage.getItem("glitch.formExercise");
+      if (want) { localStorage.removeItem("glitch.formExercise"); const m = FORM_EXERCISES.find((e) => e.id === want); if (m) return m; }
+    } catch { /* storage unavailable */ }
+    return FORM_EXERCISES[0];
+  });
   const [showPicker, setShowPicker] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [errorText, setErrorText] = useState("");

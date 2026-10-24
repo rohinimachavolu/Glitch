@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Type-check on save",
+      "trigger": "PostFileSave",
+      "description": "Runs the TypeScript type-check whenever a .ts or .tsx file is saved.",
+      "matcher": "\\.(ts|tsx)$",
+      "action": {
+        "type": "command",
+        "command": "corepack pnpm@10.4.1 check"
+      }
+    }
+  ]
+}

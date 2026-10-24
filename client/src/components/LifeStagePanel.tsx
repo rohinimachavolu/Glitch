@@ -7,8 +7,8 @@ import { useApp } from "@/contexts/AppContext";
 import { LIFE_STAGES } from "@/lib/lifeStage";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 
-const INK = "#F4F5F7";
-const MUTED = "#8B909A";
+const INK = "var(--ink)";
+const MUTED = "var(--txt-muted)";
 const font = "'DM Sans', sans-serif";
 const card = { background: "var(--card-bg)", borderRadius: 20, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" };
 

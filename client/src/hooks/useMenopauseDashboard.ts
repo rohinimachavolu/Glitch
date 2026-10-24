@@ -2,7 +2,7 @@
  * Glitch — everything the Menopause Home shows, in one place.
  */
 import { useMemo } from "react";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, bodyKind } from "@/contexts/AppContext";
 import { useHealthInsights } from "./useHealthInsights";
 import { useMenopauseInsights } from "./useMenopauseInsights";
 import { generateDemoBp, generateDemoMoods } from "@/lib/whoop/demoData";
@@ -18,7 +18,7 @@ export interface MenoDashboard {
 }
 
 export function useMenopauseDashboard(): MenoDashboard | null {
-  const { bpLog, moodLog, appraisalLog, whoop } = useApp();
+  const { bpLog, moodLog, appraisalLog, whoop, profile } = useApp();
   const h = useHealthInsights();
   const m = useMenopauseInsights();
 
@@ -26,7 +26,10 @@ export function useMenopauseDashboard(): MenoDashboard | null {
     if (!m) return null;
     const demo = whoop?.source === "demo";
     // Demo mode keeps its BP history even after the user logs a real reading
-    const bp = demo ? [...generateDemoBp(), ...bpLog].sort((a, b) => a.at.localeCompare(b.at)) : bpLog;
+    // Demo BP drifts into the high range to illustrate post-menopausal heart risk, so only show it there
+    const kind = bodyKind(profile);
+    const demoBp = demo && (kind === "peri" || kind === "menopause");
+    const bp = demoBp ? [...generateDemoBp(), ...bpLog].sort((a, b) => a.at.localeCompare(b.at)) : bpLog;
     const own = [...moodLog, ...appraisalLog.map((e) => ({ at: e.at, mood: e.input.mood, label: e.stateLabel }))];
     const moods = own.length >= 5 || !demo
       ? own
@@ -36,5 +39,5 @@ export function useMenopauseDashboard(): MenoDashboard | null {
     const mind = mentalHealthCheck(h.days, moods, bp);
     const alerts = menopauseAlerts({ stage: m.stage, warm: m.warm, frag, flashes: m.flashes, bp, mind });
     return { bp, moods, frag, mind, alerts, demo };
-  }, [bpLog, moodLog, appraisalLog, whoop, h.days, m]);
+  }, [bpLog, moodLog, appraisalLog, whoop, profile, h.days, m]);
 }

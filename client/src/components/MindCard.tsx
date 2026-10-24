@@ -14,11 +14,11 @@ import {
   SCREENER_ITEMS, SCREENER_OPTIONS, SUPPORT_RESOURCES, scoreScreener, interpretScreener,
 } from "@/lib/mentalHealth";
 
-const INK = "#F4F5F7";
-const MUTED = "#8B909A";
+const INK = "var(--ink)";
+const MUTED = "var(--txt-muted)";
 const ACCENT = "var(--accent)";
 const CALM = "oklch(0.58 0.09 260)";
-const CARD = "#17191F";
+const CARD = "var(--card-bg)";
 const font = "'DM Sans', sans-serif";
 const DAY = 86_400_000;
 

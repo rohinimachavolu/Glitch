@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X } from "lucide-react";
 import { useNudges } from "@/hooks/useNudges";
 
-const INK = "#F4F5F7";
-const MUTED = "#8B909A";
+const INK = "var(--ink)";
+const MUTED = "var(--txt-muted)";
 const font = "'DM Sans', sans-serif";
 
 export default function NudgeStrip({ onAsk, compact }: { onAsk: (prompt: string) => void; compact?: boolean }) {

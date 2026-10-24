@@ -9,6 +9,7 @@ import {
   BiologicalSex, CycleStatus, PmsSymptom, HealthCondition,
 } from "@/contexts/AppContext";
 import { ChevronRight, Leaf } from "lucide-react";
+import { toast } from "sonner";
 import { LIFE_STAGES, NO_CYCLE_OPTIONS, NoCycleReason } from "@/lib/lifeStage";
 import type { HormoneContext } from "@/lib/hormones";
 import HormoneConsent from "@/components/HormoneConsent";
@@ -124,6 +125,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const [dueDate, setDueDate] = useState("");
   const [hormones, setHormones] = useState<HormoneContext | undefined>(undefined);
   const [menoLastPeriod, setMenoLastPeriod] = useState("");
+  const [lifePhase, setLifePhase] = useState<"reproductive" | "perimenopause" | "unsure">("reproductive");
   const isMeno = noCycleReason === "menopause" || noCycleReason === "perimenopause";
 
   const isFemale = biologicalSex === "female";
@@ -144,10 +146,18 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   }
 
   function handleNext() {
-    if (step === 0 && (!name || !age || !weight || !height)) return;
-    if (step === 2 && equipment.length === 0) return;
-    if (step === 3 && workoutStyles.length === 0) return;
-    if (step === womensStep && isFemale && cycleStatus === "no" && !noCycleReason) return;
+    if (step === 0 && (!name || !age || !weight || !height)) {
+      return toast.error("Please fill in your name, age, weight and height to continue.");
+    }
+    if (step === 2 && equipment.length === 0) {
+      return toast.error("Pick at least one equipment option (choose “None” if you have no equipment).");
+    }
+    if (step === 3 && workoutStyles.length === 0) {
+      return toast.error("Pick at least one training style you enjoy.");
+    }
+    if (step === womensStep && isFemale && cycleStatus === "no" && !noCycleReason) {
+      return toast.error("Let us know why your cycle has stopped so we can tailor your guidance.");
+    }
     if (step < readyStep) { setStep(step + 1); return; }
     // Final step — submit
     setProfile({
@@ -165,6 +175,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               }
             : {}),
           ...(hormones ? { hormones: { consented: hormones.consented, preferNotToSay: hormones.preferNotToSay, uses: hormones.uses } } : {}),
+          ...(cycleStatus !== "no" ? { lifePhase } : {}),
         },
       } : {}),
     });
@@ -178,7 +189,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   if (quickMeno) return <QuickMenopauseSetup onDone={onDone} onBack={() => setQuickMeno(false)} />;
 
   return (
-    <div className="flex flex-col min-h-dvh" style={{ background: "var(--app-bg)", position: "relative", overflow: "hidden" }}>
+    <div className="flex flex-col min-h-full" style={{ background: "var(--app-bg)", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0, backgroundImage: `url(https://d2xsxph8kpxj0f.cloudfront.net/310519663713781500/N52YZyrsSNdjSRTgTVUb76/nutrisense-onboarding-3SmdPTeErfea5KVPWPdRcD.webp)`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.14, zIndex: 0 }} />
 
       <div className="relative z-10 flex flex-col flex-1 px-5 pt-10 pb-8" style={{ overflowY: "auto" }}>
@@ -348,6 +359,28 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
 
             {cycleStatus !== "no" && (
               <>
+                {/* Stage, even while still having periods */}
+                <div className="flex flex-col gap-1.5">
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>Which best describes your cycle right now?</label>
+                  {([
+                    ["reproductive", "🌱", "Regular cycles", "My periods are fairly predictable"],
+                    ["perimenopause", "🌗", "Changing: perimenopause", "Irregular periods, hot flashes, sleep or mood changes"],
+                    ["unsure", "🤔", "Not sure", "Something feels different"],
+                  ] as const).map(([id, emoji, title, sub]) => (
+                    <button key={id} onClick={() => setLifePhase(id)} aria-pressed={lifePhase === id}
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, textAlign: "left", border: lifePhase === id ? "2px solid var(--accent)" : "1.5px solid var(--line)", background: lifePhase === id ? "color-mix(in oklch, var(--accent) 10%, transparent)" : "var(--card-bg)" }}>
+                      <span style={{ fontSize: 20 }}>{emoji}</span>
+                      <span>
+                        <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>{title}</span>
+                        <span style={{ display: "block", fontSize: 11, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>{sub}</span>
+                      </span>
+                    </button>
+                  ))}
+                  {Number(age) >= 40 && lifePhase === "reproductive" && (
+                    <p style={{ fontSize: 11, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>Perimenopause often starts in the 40s, sometimes while periods are still regular. You can change this later.</p>
+                  )}
+                </div>
+
                 {/* Last period date */}
                 <div className="flex flex-col gap-1">
                   <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>Last Period Start Date</label>

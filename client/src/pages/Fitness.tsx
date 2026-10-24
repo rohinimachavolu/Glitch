@@ -4,8 +4,10 @@
  * Includes real-time step counter and dynamic goal adjustment.
  */
 import { useState, useEffect } from "react";
-import { useApp, WeeklyWorkoutPlan, WorkoutExercise } from "@/contexts/AppContext";
+import { useApp, bodyKind, WeeklyWorkoutPlan, WorkoutExercise } from "@/contexts/AppContext";
 import { useStepCounter } from "@/hooks/useStepCounter";
+import BoneHealthCard from "@/components/BoneHealthCard";
+import { isBoneHealthCohort } from "@/lib/boneHealth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +20,8 @@ const DAY_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satur
 export default function Fitness() {
   const { profile, weeklyWorkoutPlan, weeklyPlanLoading, generateWeeklyPlan, toggleExerciseCompletion, editExerciseInPlan, removeExerciseFromDay, addCustomExerciseToDay, nutritionGoals, meals, setSteps, steps: contextSteps } = useApp();
   const { steps, isActive, isSupported, start, stop, setManual } = useStepCounter(contextSteps);
+
+  const showBoneHealth = isBoneHealthCohort({ age: profile?.age, bodyKind: bodyKind(profile) });
 
   const [daysPerWeek, setDaysPerWeek] = useState(5);
   const [expandedDay, setExpandedDay] = useState<number | null>(0);
@@ -123,6 +127,13 @@ export default function Fitness() {
         </h1>
         <p className="text-sm text-muted-foreground">Build a personalized weekly workout routine</p>
       </div>
+
+      {/* Bone & muscle health (peri/menopausal women) */}
+      {showBoneHealth && (
+        <div className="px-4">
+          <BoneHealthCard />
+        </div>
+      )}
 
       {/* Step Counter */}
       <div className="px-4">

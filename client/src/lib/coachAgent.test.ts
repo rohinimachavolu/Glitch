@@ -70,3 +70,21 @@ describe("enforceBpSafety", () => {
     expect(enforceBpSafety(r, [{ type: "log_bp", systolic: 118, diastolic: 76 }], cat)).toBe(r);
   });
 });
+
+describe("period logging action", () => {
+  it("accepts log_period_start with or without a date, rejects bad dates", () => {
+    const r = parseCoachResponse(JSON.stringify({ reply: "ok", actions: [
+      { type: "log_period_start" }, { type: "log_period_start", date: "2026-10-23" }, { type: "log_period_start", date: "yesterday" },
+    ] }));
+    expect(r.actions).toHaveLength(2);
+  });
+});
+
+describe("vague meal follow-ups", () => {
+  it("instructs one round of 2–3 follow-up questions before logging vague meals", () => {
+    const p = buildSystemPrompt({ firstName: "Linda", goal: "stay healthy", localTime: "1:00 PM", todayMeals: [] });
+    expect(p).toMatch(/VAGUE meals/);
+    expect(p).toMatch(/do NOT log yet/);
+    expect(p).toMatch(/ONE round of follow-ups/);
+  });
+});

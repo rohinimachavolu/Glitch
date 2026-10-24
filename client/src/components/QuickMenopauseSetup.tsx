@@ -10,8 +10,8 @@ import type { HormoneContext } from "@/lib/hormones";
 import { ETHNICITY_OPTIONS, type Ethnicity } from "@/lib/menopauseSignals";
 import HormoneConsent from "./HormoneConsent";
 
-const INK = "#F4F5F7";
-const MUTED = "#8B909A";
+const INK = "var(--ink)";
+const MUTED = "var(--txt-muted)";
 const font = "'DM Sans', sans-serif";
 const input: React.CSSProperties = { width: "100%", padding: "14px 16px", borderRadius: 14, border: "2px solid var(--line)", fontSize: 18, fontFamily: font, color: INK, background: "var(--card-bg)", outline: "none" };
 
@@ -36,8 +36,13 @@ export default function QuickMenopauseSetup({ onDone, onBack }: { onDone: () => 
       name: name.trim(), age: Number(age), weight: Number(weight) || 70, height: Number(height) || 163,
       goal: "maintain", equipment: ["none"], workoutStyles: ["calisthenics", "yoga"], biologicalSex: "female",
       womensHealth: {
-        cycleStatus: "no", noCycleReason: where === "stopped" ? "menopause" : "perimenopause",
-        lastPeriodDate: lastPeriod, cycleLength: 28, commonSymptoms: [], healthConditions: ["none"],
+        // Still having (irregular) periods → keep cycle tracking on and add perimenopause tools
+        ...(where === "stopped"
+          ? { cycleStatus: "no" as const, noCycleReason: "menopause" as const }
+          : { cycleStatus: "irregular" as const, lifePhase: where === "changing" ? "perimenopause" as const : "unsure" as const }),
+        // Cycle tracking needs a start date; menopause staging must stay blank if unknown
+        lastPeriodDate: lastPeriod || (where === "stopped" ? "" : new Date(Date.now() - 20 * 86_400_000).toISOString().slice(0, 10)),
+        cycleLength: 30, commonSymptoms: [], healthConditions: ["none"],
         ...(ethnicity ? { ethnicity } : {}),
         ...(hormones ? { hormones } : {}),
       },
@@ -54,7 +59,7 @@ export default function QuickMenopauseSetup({ onDone, onBack }: { onDone: () => 
   );
 
   return (
-    <div className="flex flex-col min-h-dvh" style={{ padding: "28px 20px 24px", fontFamily: font, background: "var(--app-bg)" }}>
+    <div className="flex flex-col min-h-full" style={{ padding: "28px 20px 24px", fontFamily: font, background: "var(--app-bg)" }}>
       <div className="flex items-center justify-between" style={{ marginBottom: 18 }}>
         <button onClick={step === 0 ? onBack : () => setStep(step - 1)} aria-label="Back" style={{ border: "none", background: "transparent", padding: 4, color: INK }}><ChevronLeft size={26} /></button>
         <div className="flex gap-1.5">{[0, 1, 2].map((i) => <span key={i} style={{ width: i === step ? 28 : 10, height: 8, borderRadius: 999, background: i <= step ? "var(--accent)" : "var(--surface-2)", transition: "all 0.25s" }} />)}</div>

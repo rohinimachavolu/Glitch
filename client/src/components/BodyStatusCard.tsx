@@ -10,9 +10,9 @@ import { Activity, Battery, Brain, HeartPulse, Watch } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 
-const INK = "#F4F5F7";
-const MUTED = "#8B909A";
-const CARD = "#17191F";
+const INK = "var(--ink)";
+const MUTED = "var(--txt-muted)";
+const CARD = "var(--card-bg)";
 const GOOD = "oklch(0.66 0.11 148)";
 const OK = "oklch(0.75 0.12 75)";
 const BAD = "oklch(0.62 0.15 30)";

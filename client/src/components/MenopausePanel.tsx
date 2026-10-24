@@ -15,12 +15,12 @@ import { useMenopauseInsights } from "@/hooks/useMenopauseInsights";
 import { MRS_ITEMS, MRS_OPTIONS, scoreMrs, type MenoStage } from "@/lib/menopause";
 import HotflashRiskCard from "./HotflashRiskCard";
 
-const INK = "#F4F5F7";
-const MUTED = "#8B909A";
+const INK = "var(--ink)";
+const MUTED = "var(--txt-muted)";
 const HEAT = "oklch(0.63 0.17 35)";
 const COOL = "oklch(0.60 0.07 230)";
 const SAGE = "oklch(0.60 0.10 148)";
-const CARD_BG = "#17191F";
+const CARD_BG = "var(--card-bg)";
 const font = "'DM Sans', sans-serif";
 const card = { background: CARD_BG, borderRadius: 20, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" };
 

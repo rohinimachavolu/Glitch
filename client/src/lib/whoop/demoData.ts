@@ -29,12 +29,25 @@ export interface DemoOptions {
   today?: Date;
   /** Peri/post-menopause: adds warm, disrupted nights (night sweats) that ease as habits improve */
   menopausal?: boolean;
+  /** Personalises the dataset so two different people don't get identical numbers (deterministic). */
+  seed?: number;
+  /** Body metrics so the demo reflects this user (defaults to typical values). */
+  heightMeter?: number;
+  weightKg?: number;
+}
+
+/** Deterministic seed from a profile's stable fields, so each person gets consistent-but-distinct data. */
+export function demoSeedFrom(parts: { name?: string; age?: number; heightCm?: number; weightKg?: number }): number {
+  const key = `${parts.name ?? ""}|${parts.age ?? 0}|${parts.heightCm ?? 0}|${parts.weightKg ?? 0}`;
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0) % 100000 || 42;
 }
 
 export function generateDemoWhoop(opts: DemoOptions): WhoopData {
   const days = opts.days ?? 90;
   const cycleLength = opts.cycleLength ?? 29;
-  const rand = rng(42);
+  const rand = rng(opts.seed ?? 42);
   const noise = (amp: number) => (rand() - 0.5) * 2 * amp;
   const today = opts.today ?? new Date();
   const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
@@ -62,9 +75,10 @@ export function generateDemoWhoop(opts: DemoOptions): WhoopData {
     const t = firstDay + i * DAY;
     const progress = i / (days - 1); // 0 → 1 over the window
 
-    // Baseline improvement from habit change
-    let rhr = 72 - 8 * progress + noise(1.6);
-    let hrv = 36 + 16 * progress + noise(5);
+    // Baseline improvement from habit change, nudged by age (older → a bit higher RHR, lower HRV)
+    const ageAdj = (opts.age - 35) * 0.12;
+    let rhr = 72 - 8 * progress + ageAdj + noise(1.6);
+    let hrv = 36 + 16 * progress - (opts.age - 35) * 0.25 + noise(5);
     let temp = 33.6 + noise(0.08);
     let resp = 15.2 + noise(0.3);
 
@@ -182,7 +196,7 @@ export function generateDemoWhoop(opts: DemoOptions): WhoopData {
     sleeps: sleeps.reverse(),
     cycles: cycles.reverse(),
     workouts: workouts.reverse(),
-    body: { height_meter: 1.65, weight_kilogram: 72, max_heart_rate: Math.round(208 - 0.7 * opts.age) },
+    body: { height_meter: opts.heightMeter ?? 1.65, weight_kilogram: opts.weightKg ?? 72, max_heart_rate: Math.round(208 - 0.7 * opts.age) },
   };
 }
 

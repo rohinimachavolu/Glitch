@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp, getCycleDay, getCyclePhase, hasActiveCycle, tracksOvulation } from "@/contexts/AppContext";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 import { computeTheme, applyTheme, type Theme } from "@/lib/theme";
+import { useTheme as useThemeMode } from "@/contexts/ThemeContext";
 
 const font = "'DM Sans', sans-serif";
 
@@ -13,13 +14,14 @@ const font = "'DM Sans', sans-serif";
 export function useTheme(): Theme {
   const { profile } = useApp();
   const h = useHealthInsights();
+  const { theme: mode } = useThemeMode();
   return useMemo(() => {
     const wh = profile?.womensHealth;
     const phase = hasActiveCycle(profile) && tracksOvulation(profile) && wh?.lastPeriodDate
       ? h.cycle?.currentPhase ?? getCyclePhase(getCycleDay(wh.lastPeriodDate, wh.cycleLength), wh.cycleLength)
       : null;
-    return computeTheme(profile, phase);
-  }, [profile, h.cycle?.currentPhase]);
+    return computeTheme(profile, phase, mode);
+  }, [profile, h.cycle?.currentPhase, mode]);
 }
 
 export function ThemeSync() {

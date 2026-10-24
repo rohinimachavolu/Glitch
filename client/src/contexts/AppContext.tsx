@@ -13,7 +13,7 @@ import React, {
 import { LIFE_STAGES, type NoCycleReason } from "@/lib/lifeStage";
 import { ovulationTrackingAllowed, type HormoneContext } from "@/lib/hormones";
 import type { WhoopData } from "@/lib/whoop/types";
-import { generateDemoWhoop } from "@/lib/whoop/demoData";
+import { generateDemoWhoop, demoSeedFrom } from "@/lib/whoop/demoData";
 import { dataStore, downloadJson } from "@/lib/dataStore";
 import type { CheckInInput, StrategyId, Mismatch } from "@/lib/appraisal";
 import type { ScreenerResult } from "@/lib/mentalHealth";
@@ -34,6 +34,8 @@ export interface ChatMessage {
   removedMeals?: string[];
   /** Other things this turn logged (hot flashes, BP, mood) */
   chips?: string[];
+  /** Source citations backing any advice in this reply (rendered as small clickable links) */
+  sources?: { title: string; url: string }[];
   undone?: boolean;
 }
 
@@ -89,6 +91,29 @@ export interface WomensHealthProfile {
   labs?: { fsh?: number; estradiol?: number };
   /** Self-identified, optional, consented. Used only for research context (SWAN), never scoring */
   ethnicity?: Ethnicity | "prefer_not";
+  /** For people still having periods: regular cycles vs perimenopause (cycle changes + symptoms) */
+  lifePhase?: "reproductive" | "perimenopause" | "unsure";
+}
+
+/** Which "My body" home a profile gets. */
+export type BodyKind = "cycle" | "peri" | "menopause" | "none";
+
+/** Perimenopause, whether or not periods have stopped. */
+export function isPerimenopausal(p: UserProfile | null): boolean {
+  const wh = p?.womensHealth;
+  if (!wh) return false;
+  if (wh.noCycleReason === "perimenopause") return true;
+  // "Not sure" at 40+ while still cycling: show perimenopause tools too (they're harmless if not needed)
+  return wh.cycleStatus !== "no" && (wh.lifePhase === "perimenopause" || (wh.lifePhase === "unsure" && p!.age >= 40));
+}
+
+export function bodyKind(p: UserProfile | null): BodyKind {
+  const wh = p?.womensHealth;
+  if (!p || p.biologicalSex !== "female" || !wh) return "none";
+  if (wh.cycleStatus === "no" && wh.noCycleReason === "menopause") return "menopause";
+  if (isPerimenopausal(p)) return "peri";
+  if (wh.cycleStatus !== "no") return "cycle";
+  return "none"; // pregnancy, postpartum etc. use their own life-stage screens
 }
 
 export interface MoodEntry { at: string; mood: number; label?: string; source: "voice" | "text" | "tap" }
@@ -184,8 +209,11 @@ export interface WeeklyWorkoutPlan {
 // ── Cycle utility functions ──────────────────────────────────
 export function getCycleDay(lastPeriodDate: string, cycleLength = 28, today = new Date()): number {
   const start = new Date(lastPeriodDate);
+  // Blank/invalid dates (e.g. unknown last period from the menopause flows) → day 1, never NaN.
+  if (Number.isNaN(start.getTime())) return 1;
+  const len = cycleLength > 0 ? cycleLength : 28;
   const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(1, (diff % cycleLength) + 1);
+  return Math.max(1, (((diff % len) + len) % len) + 1);
 }
 
 /** True when temperature-based ovulation detection makes sense (cycling, and no ovulation-suppressing hormones). */
@@ -550,6 +578,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         else if (snap.whoop) setWhoop(snap.whoop as WhoopData);
       }
       setHydrated(true);
+    }).catch((err) => {
+      // Never get stuck on a blank shell: on any load/reset failure, boot into onboarding.
+      console.warn("Startup failed, starting fresh:", err);
+      setHydrated(true);
     });
   }, []);
 
@@ -665,13 +697,17 @@ function lifeStageFor(p: UserProfile) {
 function buildDemo(p: UserProfile): WhoopData {
   const wh = p.womensHealth;
   const cycling = tracksOvulation(p);
-  const menopausal = wh?.cycleStatus === "no" && (wh.noCycleReason === "perimenopause" || wh.noCycleReason === "menopause");
+  const menopausal = isPerimenopausal(p) || wh?.noCycleReason === "menopause";
   return generateDemoWhoop({
     menopausal,
     menstruating: cycling,
     lastPeriodDate: cycling ? wh!.lastPeriodDate : undefined,
     cycleLength: wh?.cycleLength,
     age: p.age,
+    // Personalise so two different users don't get identical demo data (deterministic per profile).
+    seed: demoSeedFrom({ name: p.name, age: p.age, heightCm: p.height, weightKg: p.weight }),
+    heightMeter: p.height ? p.height / 100 : undefined,
+    weightKg: p.weight || undefined,
   });
 }
 

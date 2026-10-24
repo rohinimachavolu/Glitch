@@ -23,7 +23,7 @@ const MACRO_COLORS = {
 };
 
 export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string) => void }) {
-  const { profile, nutritionGoals, nutritionLoading, meals, steps, streak } = useApp();
+  const { profile, nutritionGoals, nutritionLoading, meals, steps, streak, setProfile } = useApp();
   const [motivMsg, setMotivMsg] = useState<string | null>(null);
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
@@ -111,6 +111,12 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
         <p style={{ fontSize: 14, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif", textAlign: "center" }}>
           Could not load your nutrition plan. Please check your connection and try again.
         </p>
+        {profile && (
+          <button onClick={() => setProfile(profile)}
+            style={{ padding: "11px 20px", borderRadius: 14, border: "none", background: "var(--accent)", color: "var(--on-accent)", fontWeight: 700, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
+            Try again
+          </button>
+        )}
       </div>
     );
   }

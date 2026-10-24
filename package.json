@@ -81,6 +81,7 @@
     "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
     "esbuild": "^0.25.0",
+    "fast-check": "^4.10.2",
     "pnpm": "^10.15.1",
     "postcss": "^8.4.47",
     "prettier": "^3.6.2",

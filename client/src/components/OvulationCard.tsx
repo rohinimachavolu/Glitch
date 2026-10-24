@@ -8,11 +8,11 @@ import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from "recharts";
 import { useApp, hasActiveCycle, tracksOvulation } from "@/contexts/AppContext";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
-import type { OvulationResult } from "@/lib/healthMetrics";
+import { ovulationConfidenceSummary, type OvulationResult } from "@/lib/healthMetrics";
 import { hormoneNotes } from "@/lib/hormones";
 
-const INK = "#F4F5F7";
-const MUTED = "#8B909A";
+const INK = "var(--ink)";
+const MUTED = "var(--txt-muted)";
 const GOOD = "oklch(0.62 0.11 148)";
 const WARN = "oklch(0.62 0.14 40)";
 const font = "'DM Sans', sans-serif";
@@ -91,15 +91,26 @@ export default function OvulationCard() {
       <div className="flex flex-col gap-1.5 mb-3">
         {history.map((o) => {
           const s = STATUS[o.status];
+          const conf = ovulationConfidenceSummary(o);
           return (
-            <div key={o.cycleStart} className="flex items-center justify-between" style={{ padding: "7px 10px", borderRadius: 11, background: s.bg }}>
-              <div className="flex items-center gap-2">
-                <span style={{ width: 18, height: 18, borderRadius: "50%", background: s.color, color: "white", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.icon}</span>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: INK, fontFamily: font }}>Cycle from {fmt(o.cycleStart)}</span>
+            <div key={o.cycleStart} style={{ padding: "7px 10px", borderRadius: 11, background: s.bg }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span style={{ width: 18, height: 18, borderRadius: "50%", background: s.color, color: "white", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.icon}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: INK, fontFamily: font }}>Cycle from {fmt(o.cycleStart)}</span>
+                </div>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: s.color, fontFamily: font }}>
+                  {o.status === "confirmed" ? `Day ${o.ovulationCycleDay} · +${o.tempShift}°C` : s.label}
+                </span>
               </div>
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: s.color, fontFamily: font }}>
-                {o.status === "confirmed" ? `Day ${o.ovulationCycleDay} · +${o.tempShift}°C` : s.label}
-              </span>
+              {conf.show && (
+                <div className="flex items-center gap-1.5" style={{ marginTop: 5, marginLeft: 26 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.3, padding: "2px 7px", borderRadius: 999, color: conf.tone === "high" ? GOOD : MUTED, background: conf.tone === "high" ? "oklch(0.62 0.11 148 / 0.14)" : "var(--surface-2)", fontFamily: font }}>
+                    {conf.label}
+                  </span>
+                  <span style={{ fontSize: 10.5, color: MUTED, fontFamily: font }}>{conf.detail}</span>
+                </div>
+              )}
             </div>
           );
         })}

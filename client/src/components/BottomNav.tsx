@@ -14,7 +14,6 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ active, onChange, isFemale = false }: BottomNavProps) {
-  const dark = true; // one design system everywhere
   const tabs = isFemale
     ? [
         { id: "home",     label: "Home",    icon: Home },
@@ -36,14 +35,14 @@ export default function BottomNav({ active, onChange, isFemale = false }: Bottom
     <nav
       className="fixed bottom-0 z-50 flex items-center justify-around"
       style={{
-        maxWidth: 430,
+        maxWidth: "none",
         width: "100%",
         left: "50%",
         transform: "translateX(-50%)",
-        background: dark ? "#0D0E12" : "var(--card-bg)",
-        borderTop: dark ? "1px solid #262932" : "1px solid var(--line)",
+        background: "var(--card-bg)",
+        borderTop: "1px solid var(--line)",
         boxShadow: "0 -4px 20px color-mix(in oklch, var(--accent) 8%, transparent)",
-        paddingBottom: "env(safe-area-inset-bottom, 8px)",
+        paddingBottom: "max(8px, var(--safe-bottom))",
         paddingTop: 8,
       }}
     >
@@ -57,7 +56,7 @@ export default function BottomNav({ active, onChange, isFemale = false }: Bottom
             className="flex flex-col items-center gap-0.5 rounded-xl"
             style={{
               padding: isFemale ? "4px 8px" : "4px 12px",
-              color: isActive ? activeColor : dark ? "#8B909A" : "oklch(0.55 0.020 60)",
+              color: isActive ? activeColor : "var(--txt-muted)",
               background: "transparent",
               minWidth: isFemale ? 44 : 52,
               position: "relative",
@@ -65,7 +64,7 @@ export default function BottomNav({ active, onChange, isFemale = false }: Bottom
           >
             {isActive && (
               <motion.span layoutId="nav-pill" transition={{ type: "spring", stiffness: 420, damping: 30 }}
-                style={{ position: "absolute", inset: 0, borderRadius: 12, background: dark ? "#24262E" : "color-mix(in oklch, var(--accent) 13%, transparent)", zIndex: -1 }} />
+                style={{ position: "absolute", inset: 0, borderRadius: 12, background: "var(--surface-2)", zIndex: -1 }} />
             )}
             <motion.span animate={{ y: isActive ? -2 : 0, scale: isActive ? 1.12 : 1 }} transition={{ type: "spring", stiffness: 500, damping: 18 }} style={{ display: "flex" }}>
               <Icon size={isFemale ? 18 : 20} strokeWidth={isActive ? 2.2 : 1.8} />

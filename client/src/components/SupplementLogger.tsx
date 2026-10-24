@@ -4,11 +4,12 @@
  * Design: Organic Wellness Journal
  */
 import { useState } from "react";
-import { useApp, Supplement } from "@/contexts/AppContext";
+import { useApp, bodyKind, Supplement } from "@/contexts/AppContext";
 import { Plus, X, Pill, Check } from "lucide-react";
 import { checkTaking, scheduleIssues, FOOD_RULES, kindOf } from "@/lib/supplementRules";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
+import { isBoneHealthCohort, suggestBoneSupplements, CITATIONS } from "@/lib/boneHealth";
 
 const COMMON_SUPPLEMENTS = [
   { name: "Vitamin D3",   dose: "1000 IU",  emoji: "☀️" },
@@ -26,8 +27,10 @@ const COMMON_SUPPLEMENTS = [
 const TIME_OPTIONS = ["Morning", "Afternoon", "Evening", "With Meal", "Before Workout", "After Workout"];
 
 export default function SupplementLogger() {
-  const { supplements, addSupplement, removeSupplement, supplementTaken, markSupplementTaken, undoSupplementTaken, meals } = useApp();
+  const { profile, supplements, addSupplement, removeSupplement, supplementTaken, markSupplementTaken, undoSupplementTaken, meals } = useApp();
   const issues = scheduleIssues(supplements);
+  const showBoneSupps = isBoneHealthCohort({ age: profile?.age, bodyKind: bodyKind(profile) });
+  const boneSuggestions = showBoneSupps ? suggestBoneSupplements() : [];
   const takenToday = (id: string) => supplementTaken.some((t) => t.supplementId === id && new Date(t.at).toDateString() === new Date().toDateString());
 
   function take(s: Supplement) {
@@ -89,6 +92,38 @@ export default function SupplementLogger() {
           <Plus size={12} /> {open ? "Cancel" : "Add"}
         </button>
       </div>
+
+      {/* Suggested for peri/menopausal women (bone + muscle) */}
+      {boneSuggestions.length > 0 && (
+        <div style={{ marginBottom: 12, padding: "11px 12px", borderRadius: 14, background: "color-mix(in oklch, var(--accent) 7%, var(--card-bg))", border: "1px solid color-mix(in oklch, var(--accent) 22%, transparent)" }}>
+          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "var(--accent)", fontFamily: "'DM Sans', sans-serif", textTransform: "uppercase", marginBottom: 8 }}>
+            Suggested for bone & muscle
+          </p>
+          <div className="flex flex-col gap-2">
+            {boneSuggestions.map((s) => {
+              const added = supplements.some((sup) => sup.name === s.name);
+              return (
+                <div key={s.name} className="flex items-center gap-3">
+                  <span style={{ fontSize: 18 }}>{s.emoji}</span>
+                  <div className="flex-1" style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>{s.name} <span style={{ color: "var(--txt-muted)", fontWeight: 500 }}>· {s.dose}</span></p>
+                    <p style={{ fontSize: 11, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.4 }}>
+                      {s.reason} <a href={CITATIONS[s.citationKey].url} target="_blank" rel="noreferrer" title={CITATIONS[s.citationKey].title} style={{ color: "var(--accent)", fontWeight: 700, textDecoration: "none" }}>source ↗</a>
+                    </p>
+                  </div>
+                  <button onClick={() => handleQuickAdd({ name: s.name, dose: s.dose, emoji: s.emoji })} disabled={added} aria-label={`Add ${s.name}`}
+                    style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 999, border: "none", fontSize: 11.5, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", background: added ? "color-mix(in oklch, var(--accent) 16%, transparent)" : "var(--accent)", color: added ? "var(--accent)" : "var(--on-accent)" }}>
+                    {added ? "Added" : "Add"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <p style={{ fontSize: 10, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif", marginTop: 8, lineHeight: 1.4 }}>
+            General guidance for women over 50 — confirm doses with your clinician or pharmacist.
+          </p>
+        </div>
+      )}
 
       {/* Current supplements */}
       {supplements.length === 0 && !open && (

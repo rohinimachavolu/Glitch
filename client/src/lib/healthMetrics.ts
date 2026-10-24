@@ -130,6 +130,43 @@ export function detectOvulationHistory(days: DailyPhysiology[], windows: CycleWi
   return windows.map((w) => detectOvulation(days, w));
 }
 
+export interface OvulationConfidenceSummary {
+  /** False unless the cycle's ovulation is confirmed. */
+  show: boolean;
+  /** "High confidence" | "Medium confidence" | "" */
+  label: string;
+  tone: "high" | "medium" | null;
+  /** Physiology behind the call, e.g. "+0.31 °C skin temp · +1.8 bpm resting HR". */
+  detail: string;
+}
+
+/**
+ * Turn a confirmed OvulationResult into trust-building display copy. Progesterone raises
+ * both skin temperature and resting heart rate after ovulation, so a matching RHR rise
+ * corroborates the temperature shift. Pure — the UI only renders what this returns.
+ */
+export function ovulationConfidenceSummary(ov: OvulationResult): OvulationConfidenceSummary {
+  if (ov.status !== "confirmed") return { show: false, label: "", tone: null, detail: "" };
+
+  const tone = ov.confidence ?? "medium";
+  const label = tone === "high" ? "High confidence" : "Medium confidence";
+
+  const parts: string[] = [];
+  if (ov.tempShift != null && Number.isFinite(ov.tempShift)) {
+    parts.push(`${signed(ov.tempShift)} °C skin temp`);
+  }
+  if (ov.rhrShift != null && Number.isFinite(ov.rhrShift)) {
+    parts.push(`${signed(ov.rhrShift, 1)} bpm resting HR`);
+  }
+  return { show: true, label, tone, detail: parts.join(" · ") };
+}
+
+/** Format a number with a sign prefix for non-negative values, fixed to `digits` decimals. */
+function signed(n: number, digits = 2): string {
+  const v = n.toFixed(digits);
+  return n >= 0 ? `+${v}` : v;
+}
+
 /** Phase for a given day, using a detected ovulation date when we have one. */
 export function phaseForDay(date: string, win: CycleWindow, ov: OvulationResult | undefined, cycleLength: number): CyclePhase {
   const cycleDay = Math.round((parseDay(date) - parseDay(win.start)) / DAY) + 1;

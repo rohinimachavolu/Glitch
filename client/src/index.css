@@ -106,6 +106,48 @@
   --sidebar-ring: oklch(0.78 0.15 150);
 }
 
+/* ── Light theme (applied when the <html> element is NOT .dark) ──
+   Same token names, warm light surfaces. Accent hue is still overwritten at
+   runtime by lib/theme.ts; only its lightness/contrast pairing changes here. */
+:root:not(.dark) {
+  color-scheme: light;
+
+  --app-bg: #F7F6F3;        /* warm off-white page */
+  --app-outer: #E7E4DD;     /* around the phone shell */
+  --card-bg: #FFFFFF;       /* cards / tiles */
+  --surface-2: #EFEDE8;     /* chips, inputs, inner panels */
+  --line: #DFDCD4;          /* hairlines / borders */
+  --ink: #1C1D21;           /* primary text */
+  --ink-2: #44474F;         /* secondary text */
+  --txt-muted: #70747C;     /* captions */
+  --muted: #EFEDE8;
+
+  --accent-deep: oklch(0.45 0.13 150);
+  --on-accent: #FFFFFF;     /* text/icons on accent fills */
+
+  /* shadcn/ui tokens mapped onto the light system */
+  --background: #F7F6F3;
+  --foreground: #1C1D21;
+  --card: #FFFFFF;
+  --card-foreground: #1C1D21;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C1D21;
+  --primary-foreground: #FFFFFF;
+  --secondary: #EFEDE8;
+  --secondary-foreground: #1C1D21;
+  --muted-foreground: #70747C;
+  --accent-foreground: #FFFFFF;
+  --destructive-foreground: #FFFFFF;
+  --border: #DFDCD4;
+  --input: #EFEDE8;
+
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1C1D21;
+  --sidebar-accent: #EFEDE8;
+  --sidebar-accent-foreground: #1C1D21;
+  --sidebar-border: #DFDCD4;
+}
+
 
 
 @layer base {
@@ -206,14 +248,64 @@ button:active:not(:disabled) {
   transition: transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* Mobile phone shell on desktop */
+/* ── Device frame: iPhone 17 Pro (402 × 874 pt) ──
+   On a real phone the app fills the screen and uses the OS safe areas.
+   On a laptop it renders inside a 402 × 874 frame with Dynamic Island, status bar and home indicator.
+   `transform` makes the shell the containing block for position:fixed children (nav, sheets, mic),
+   so they stay inside the frame. */
+:root {
+  --app-w: 100vw;
+  --app-h: 100dvh;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
 .phone-shell {
-  max-width: 430px;
+  width: 100%;
+  height: var(--app-h);
   margin: 0 auto;
-  min-height: 100dvh;
   position: relative;
   overflow: hidden;
   background: var(--background);
+  transform: translateZ(0);
+}
+.device-chrome { display: none; }
+
+@media (min-width: 520px) and (min-height: 560px) {
+  :root {
+    --app-w: 402px;
+    --app-h: 874px;
+    --safe-top: 54px;
+    --safe-bottom: 28px;
+  }
+  .phone-shell {
+    width: 402px;
+    flex-shrink: 0;
+    margin: 12px auto;
+    border-radius: 55px;
+    /* Fit-to-window scale, set by App.tsx (largest size that fits; up to 1.3× on big screens) */
+    zoom: var(--frame-zoom, 1);
+    box-shadow:
+      0 0 0 11px #0b0b0d,
+      0 0 0 13px #3a3a3f,
+      0 30px 80px rgba(0, 0, 0, 0.55);
+  }
+  .device-chrome { display: block; }
+}
+
+
+/* Dynamic Island + status bar + home indicator (desktop frame only) */
+.device-island {
+  position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+  width: 124px; height: 36px; border-radius: 20px; background: #000; z-index: 400; pointer-events: none;
+}
+.device-status {
+  position: absolute; top: 0; left: 0; right: 0; height: 54px; z-index: 390; pointer-events: none;
+  display: flex; align-items: center; justify-content: space-between; padding: 6px 34px 0 46px;
+  font: 600 16px/1 'DM Sans', -apple-system, sans-serif; color: var(--ink);
+}
+.device-home {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  width: 136px; height: 5px; border-radius: 3px; background: var(--ink); opacity: 0.85; z-index: 400; pointer-events: none;
 }
 
 /* Bottom nav safe area */

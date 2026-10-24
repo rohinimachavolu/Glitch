@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
 import { hotflashRisk, MODEL_CARD } from "@/lib/hotflashRisk";
 
-const INK = "#F4F5F7";
-const MUTED = "#8B909A";
+const INK = "var(--ink)";
+const MUTED = "var(--txt-muted)";
 const HEAT = "oklch(0.63 0.17 35)";
 const SAGE = "oklch(0.60 0.10 148)";
 const font = "'DM Sans', sans-serif";

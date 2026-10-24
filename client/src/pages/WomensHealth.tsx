@@ -4,7 +4,7 @@
  * Disclaimer: Cycle predictions are estimates, not medical advice.
  */
 import { useState, useEffect, useRef } from "react";
-import { useApp, getCycleDay, getCyclePhase, getNextPeriodDate, getOvulationDate, CyclePhase, CycleSymptomEntry } from "@/contexts/AppContext";
+import { useApp, getCycleDay, getCyclePhase, getNextPeriodDate, getOvulationDate, CyclePhase, CycleSymptomEntry, isPerimenopausal } from "@/contexts/AppContext";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import {
@@ -189,7 +189,8 @@ export default function WomensHealth() {
   const wh = profile?.womensHealth;
   const insights = useHealthInsights();
   const [activeSection, setActiveSection] = useState<"overview" | "checkin" | "insights" | "analytics">("overview");
-  const [periWatch, setPeriWatch] = useState(false);
+  const peri = isPerimenopausal(profile ?? null);
+  const [periWatch, setPeriWatch] = useState(peri);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [insightLoading, setInsightLoading] = useState(false);
 
@@ -335,14 +336,14 @@ export default function WomensHealth() {
             <OvulationCard />
 
             {/* 40+: perimenopause can start while cycles continue */}
-            {profile.age >= 40 && (
+            {(profile.age >= 40 || peri) && (
               <button onClick={() => setPeriWatch((v) => !v)}
                 style={{ width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: 18, border: "1.5px solid oklch(0.63 0.17 35 / 0.35)", background: "oklch(0.63 0.17 35 / 0.06)" }}>
                 <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>🌗 Perimenopause watch {periWatch ? "▲" : "▼"}</p>
                 <p style={{ fontSize: 12, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>Cycle changes, hot flashes, night sweats and training for your 40s+</p>
               </button>
             )}
-            {profile.age >= 40 && periWatch && <div style={{ margin: "0 -16px" }}><MenopausePanel /></div>}
+            {(profile.age >= 40 || peri) && periWatch && <div style={{ margin: "0 -16px" }}><MenopausePanel /></div>}
 
             {/* Period calendar */}
             <PeriodCalendar lastPeriodDate={wh.lastPeriodDate} cycleLength={wh.cycleLength} />

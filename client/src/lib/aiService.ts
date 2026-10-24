@@ -9,30 +9,74 @@
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 const GROQ_KEY  = import.meta.env.VITE_GROQ_API_KEY as string;
 const TEXT_MODEL   = (import.meta.env.VITE_GROQ_TEXT_MODEL as string) || "openai/gpt-oss-120b";
+// Separate per-model quota on Groq, used when the main model is rate-limited
+const FALLBACK_TEXT_MODEL = (import.meta.env.VITE_GROQ_FALLBACK_MODEL as string) || "openai/gpt-oss-20b";
 const VISION_MODEL = (import.meta.env.VITE_GROQ_VISION_MODEL as string) || "qwen/qwen3.8-27b";
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Seconds Groq asks us to wait on a 429 (header or "try again in 4.2s" in the body). */
+function retryAfterSeconds(res: Response, body: string): number {
+  const h = Number(res.headers.get("retry-after"));
+  if (Number.isFinite(h) && h > 0) return h;
+  const m = body.match(/try again in ([0-9.]+)s/i);
+  return m ? Number(m[1]) : 10;
+}
+
 // ── Generic text chat (JSON output) ──────────────────────────
+// The free Groq tier allows ~8k tokens/minute per model, so: small token budgets, low reasoning effort,
+// a short wait-and-retry on 429, then the fallback model (which has its own quota).
+interface ChatOpts {
+  /** Background jobs start on the fallback model so the main model's quota stays free for live chat */
+  background?: boolean;
+  /** Live chat: if every model is busy, wait out Groq's suggested delay (≤20 s) once more instead of failing */
+  patient?: boolean;
+}
+
 async function chat(
   messages: { role: string; content: string }[],
-  json = true
+  json = true,
+  maxTokens = 1200,
+  opts: ChatOpts = {}
 ): Promise<string> {
-  const res = await fetch(`${GROQ_BASE}/chat/completions`, {
+  const primary = opts.background ? FALLBACK_TEXT_MODEL : TEXT_MODEL;
+  const secondary = opts.background ? TEXT_MODEL : FALLBACK_TEXT_MODEL;
+  const call = (model: string) => fetch(`${GROQ_BASE}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${GROQ_KEY}`,
     },
     body: JSON.stringify({
-      model: TEXT_MODEL,
+      model,
       messages,
       temperature: 0.3,
-      // Reasoning models spend part of the budget thinking before the JSON
-      max_tokens: 3000,
+      max_tokens: maxTokens,
+      ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
       ...(json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
+
+  let res = await call(primary);
+  if (res.status === 429) {
+    const wait = retryAfterSeconds(res, await res.text());
+    if (wait <= 6) { await sleep(wait * 1000 + 250); res = await call(primary); }
+    if (res.status === 429) res = await call(secondary);
+    if (res.status === 429 && opts.patient) {
+      await sleep(Math.min(20, retryAfterSeconds(res, await res.text())) * 1000 + 300);
+      res = await call(primary);
+    }
+  }
   if (!res.ok) {
     const err = await res.text();
+    // JSON mode sometimes rejects a reply the model wrote as plain text (e.g. a follow-up question).
+    // Groq hands that text back as `failed_generation`; callers already treat non-JSON text as the reply.
+    if (res.status === 400) {
+      try {
+        const e = JSON.parse(err)?.error;
+        if (e?.code === "json_validate_failed" && typeof e.failed_generation === "string" && e.failed_generation.trim()) return e.failed_generation;
+      } catch { /* not JSON */ }
+    }
     throw new Error(`Groq API error ${res.status}: ${err}`);
   }
   const data = await res.json();
@@ -154,7 +198,7 @@ Use Mifflin-St Jeor BMR × 1.55 activity multiplier, then adjust for goal:
 Return ONLY valid JSON (no markdown, no explanation):
 {"calorieTarget":1800,"proteinTarget":90,"carbsTarget":220,"fatsTarget":55,"fiberTarget":30,"omega3Target":2.0,"vitDTarget":600,"vitB12Target":2.4,"ironTarget":18,"stepGoal":8000,"rationale":"One friendly sentence explaining the plan"}`;
 
-    const raw = await chat([{ role: "user", content: prompt }]);
+    const raw = await chat([{ role: "user", content: prompt }], true, 900, { background: true });
     return safeParseJSON<NutritionGoals>(raw, fallback);
   } catch (error) {
     console.warn("Nutrition plan generation failed, using local fallback:", error);
@@ -243,7 +287,7 @@ Critical rules:
 Return ONLY a valid JSON array (no markdown, no extra text):
 [{"id":"squat","name":"Bodyweight Squat","detail":"3 × 15 reps","burn":80,"emoji":"🏋️","rationale":"Builds leg strength with no equipment needed","cues":["Keep chest up","Knees over toes","Lower hips to parallel","Drive through heels"],"goodCue":"Perfect depth! Great form"}]`;
 
-    const raw = await chat([{ role: "user", content: prompt }]);
+    const raw = await chat([{ role: "user", content: prompt }], true, 2600, { background: true });
 
     // Groq with json_object mode wraps arrays — handle both cases
     let parsed: Exercise[];
@@ -329,7 +373,7 @@ Use a typical standard serving size.
 Return ONLY valid JSON (no markdown):
 {"found":true,"name":"1 tbsp Flax Seeds","calories":37,"protein":1.3,"carbs":2.0,"fats":3.0,"fiber":1.9,"omega3":1.60}`;
 
-    const raw = await chat([{ role: "user", content: prompt }]);
+    const raw = await chat([{ role: "user", content: prompt }], true, 700);
     return safeParseJSON<IngredientNutrition>(raw, fallback);
   } catch (error) {
     console.warn("Ingredient lookup failed, using local fallback:", error);
@@ -350,7 +394,7 @@ export async function getMotivationalMessage(profile: {
   try {
     const prompt = `Write a short (max 12 words) warm motivational message for ${profile.name} who is ${Math.round(profile.caloriesPct * 100)}% through their calorie goal and ${Math.round(profile.proteinPct * 100)}% through their protein goal today. They have a ${profile.streakDays}-day logging streak. Goal: ${profile.goal}. Be specific and warm. Return ONLY the message text, no quotes, no JSON.`;
 
-    return await chat([{ role: "user", content: prompt }], false);
+    return await chat([{ role: "user", content: prompt }], false, 300, { background: true });
   } catch (error) {
     console.warn("Motivational message generation failed, using local fallback:", error);
     return "Keep going — your plan is working.";
@@ -375,7 +419,7 @@ ${ctx.note ? `They wrote: "${ctx.note.slice(0, 200)}"\n` : ""}The coaching strat
 Write ONE or TWO short sentences (max 35 words) that validate how they feel and encourage them to try that strategy.
 Rules: never shame, never mention calories or weight, never give medical advice, don't suggest a different strategy.
 Return ONLY the message text.`;
-    const text = (await chat([{ role: "user", content: prompt }], false)).replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    const text = (await chat([{ role: "user", content: prompt }], false, 400)).replace(/<think>[\s\S]*?<\/think>/g, "").trim();
     return text || null;
   } catch (error) {
     console.warn("Coaching phrasing failed, using engine text:", error);
@@ -387,5 +431,5 @@ Return ONLY the message text.`;
 // Conversational coach — multi-turn, JSON (see lib/coachAgent.ts)
 // ─────────────────────────────────────────────────────────────
 export async function coachCompletion(messages: { role: "system" | "user" | "assistant"; content: string }[]): Promise<string> {
-  return chat(messages, true);
+  return chat(messages, true, 700, { patient: true });
 }

@@ -45,3 +45,30 @@ describe("AI service fallbacks", () => {
     expect(message.length).toBeGreaterThan(0);
   });
 });
+
+describe("Groq rate-limit handling", () => {
+  it("retries after a short 429 wait, then falls back to the second model", async () => {
+    const { coachCompletion } = await import("./aiService");
+    const models: string[] = [];
+    const fetchMock = vi.fn(async (_url: string, init: { body: string }) => {
+      const model = JSON.parse(init.body).model as string;
+      models.push(model);
+      if (models.length <= 2) return new Response('{"error":{"message":"Rate limit. Please try again in 0.01s"}}', { status: 429 });
+      return new Response(JSON.stringify({ choices: [{ message: { content: '{"reply":"hi","actions":[]}' } }] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const out = await coachCompletion([{ role: "user", content: "hello" }]);
+    expect(out).toContain('"reply":"hi"');
+    expect(models[0]).toBe(models[1]);                 // retried the same model once
+    expect(models[2]).not.toBe(models[0]);             // then the fallback model
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body).reasoning_effort).toBe("low");
+  });
+});
+
+describe("JSON-mode recovery", () => {
+  it("uses Groq's failed_generation text when the model answered in plain text", async () => {
+    const { coachCompletion } = await import("./aiService");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { code: "json_validate_failed", failed_generation: "What kind of pasta was it?" } }), { status: 400 })));
+    expect(await coachCompletion([{ role: "user", content: "had pasta" }])).toBe("What kind of pasta was it?");
+  });
+});

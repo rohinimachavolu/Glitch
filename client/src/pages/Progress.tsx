@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import WellnessCheckIn from "@/components/WellnessCheckIn";
 import PrivacyCard from "@/components/PrivacyCard";
+import AppearanceCard from "@/components/AppearanceCard";
 import MindCard from "@/components/MindCard";
 
 const CHART_TABS = ["Calories", "Protein", "Steps"];
@@ -393,6 +394,8 @@ export default function Progress() {
             </ResponsiveContainer>
           )}
         </div>
+
+        <AppearanceCard />
 
         <PrivacyCard />
       </div>

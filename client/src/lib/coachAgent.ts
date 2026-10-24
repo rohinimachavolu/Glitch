@@ -25,14 +25,25 @@ const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("log_hot_flash"), intensity: z.number().int().min(1).max(3).default(2), night: z.boolean().default(false), count: z.number().int().min(1).max(10).default(1) }),
   z.object({ type: z.literal("log_bp"), systolic: z.number().int().min(70).max(250), diastolic: z.number().int().min(40).max(150), pulse: z.number().int().min(30).max(220).optional() }),
   z.object({ type: z.literal("log_mood"), mood: z.number().int().min(1).max(5) }),
+  z.object({ type: z.literal("log_period_start"), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
 ]);
 export type CoachAction = z.infer<typeof ActionSchema>;
+
+export interface CoachSource {
+  title: string;
+  url: string;
+}
 
 export interface CoachResponse {
   reply: string;
   moodRead: { valence: number; arousal: number } | null;
   actions: CoachAction[];
+  /** Reputable sources backing any health claim in the reply (may be empty) */
+  sources: CoachSource[];
 }
+
+/** Only accept citations from reputable health/medical/research domains. */
+const TRUSTED_SOURCE = /^(https:\/\/)([a-z0-9-]+\.)*(nih\.gov|ncbi\.nlm\.nih\.gov|pubmed\.ncbi\.nlm\.nih\.gov|who\.int|cdc\.gov|uspreventiveservicestaskforce\.org|mayoclinic\.org|nhs\.uk|menopause\.org|acog\.org|heart\.org|health\.harvard\.edu|stanford\.edu|frontiersin\.org|mdpi\.com|springer\.com|orthoinfo\.org|niams\.nih\.gov)(\/|$)/i;
 
 /** Parse the model's JSON, keeping valid actions and dropping invalid ones individually. */
 export function parseCoachResponse(raw: string): CoachResponse {
@@ -54,7 +65,20 @@ export function parseCoachResponse(raw: string): CoachResponse {
   if (mr && typeof mr.valence === "number" && typeof mr.arousal === "number") {
     moodRead = { valence: Math.max(-1, Math.min(1, mr.valence)), arousal: Math.max(0, Math.min(1, mr.arousal)) };
   }
-  return { reply, moodRead, actions };
+
+  // Keep only well-formed citations from trusted domains; cap at 3.
+  const sources: CoachSource[] = [];
+  if (Array.isArray(obj.sources)) {
+    for (const s of obj.sources) {
+      const src = s as { title?: unknown; url?: unknown };
+      if (typeof src.url === "string" && typeof src.title === "string" && src.title.trim() && TRUSTED_SOURCE.test(src.url) && !sources.some((x) => x.url === src.url)) {
+        sources.push({ title: src.title.trim().slice(0, 120), url: src.url });
+      }
+      if (sources.length >= 3) break;
+    }
+  }
+
+  return { reply, moodRead, actions, sources };
 }
 
 export interface CoachContext {
@@ -92,8 +116,12 @@ ${c.hormones ? `- Hormones/contraception (shared with consent): ${c.hormones}\n`
 TONE: ${tone}
 
 MEAL LOGGING
-- When the user says they ate or drank something (e.g. "I had 2 eggs and toast", "just finished a latte"), add a log_meal action with your best nutrition estimate for a typical portion. Combine foods eaten together into ONE meal with a short descriptive name.
-- Estimate realistically (USDA-style values) and don't lowball: include cooking fats, oils, butter, sauces and dressings, and assume typical home/restaurant portions. Reference points: 1 large egg ≈ 72 kcal (≈ 90–100 scrambled with butter), 1 slice sourdough ≈ 130 kcal, 1 tbsp butter ≈ 100 kcal, 1 tbsp olive oil ≈ 120 kcal.
+- SPECIFIC meals ("2 scrambled eggs and a slice of sourdough", "a grande oat latte", "Chipotle chicken burrito bowl") → log right away with log_meal.
+- VAGUE meals ("I ate a wrap", "had pasta", "a sandwich", "some chips") → do NOT log yet. Reply with ONE short, friendly message asking 2–3 quick follow-ups, chosen from: what kind/filling, how big (or the weight if they know it), and where it came from (homemade, or which restaurant). Example: "Yum! What kind of wrap was it, chicken, falafel or veggie? Homemade or from somewhere? And roughly how big: regular or large?"
+- Ask only ONE round of follow-ups per meal. On their next message, log it using whatever they told you. If they say "not sure", "skip" or "just log it", log a typical portion and state the assumption.
+- If they name a restaurant or brand, use that menu item's typical nutrition (e.g. Chipotle, Sweetgreen, Starbucks, Subway).
+- When they ate several things together, combine them into ONE meal with a short descriptive name.
+- Estimate realistically (USDA-style values) and don't lowball: include cooking fats, oils, butter, sauces and dressings, and assume typical home/restaurant portions. Reference points: 1 large egg ≈ 72 kcal (≈ 90–100 scrambled with butter), 1 slice sourdough ≈ 130 kcal, 1 tbsp butter ≈ 100 kcal, 1 tbsp olive oil ≈ 120 kcal, Starbucks grande oat milk latte ≈ 190 kcal (grande whole-milk latte ≈ 190, with flavored syrup add ~80).
 - Pick type from the time of day or what they say (Breakfast/Lunch/Dinner/Snack).
 - If they correct a meal ("actually it was 3 slices"), add remove_meal with the old name, then log_meal with the corrected one.
 - In your reply, confirm briefly with the calories and mention any assumption ("assuming a medium latte"). Never shame food choices.
@@ -106,8 +134,14 @@ SUPPLEMENTS
 SYMPTOM & HEALTH LOGGING (voice-first: many users are 45+ and prefer talking to tapping)
 - "I'm having a hot flash" / "had two hot flashes this morning" / "woke up drenched" → log_hot_flash (intensity 1 mild, 2 moderate, 3 severe; night=true for night sweats; count if several).
 - "My blood pressure is 135 over 85" → log_bp. Describe it using the ACC/AHA categories EXACTLY: normal <120 and <80; elevated 120–129 and <80; high (stage 1) 130–139 or 80–89; high (stage 2) ≥140 or ≥90; very high >180 or >120. Never call a reading of 130+ systolic or 80+ diastolic "healthy" or "normal". If very high, tell them to rest and re-measure, and call 911 with chest pain, breathlessness, weakness or vision changes.
+- "My period started today" / "got my period yesterday" → log_period_start (date YYYY-MM-DD; omit for today).
 - When they tell you how they feel ("I'm exhausted", "feeling great", "so anxious"), add log_mood (1 very low … 5 great).
 - Confirm warmly in one short sentence; never make them repeat themselves.
+
+SOURCES (citations)
+- When you give a specific health, nutrition, bone, muscle or menopause CLAIM (e.g. "resistance training protects bone density", "aim for ~1g/kg protein", "bone loss speeds up around menopause"), add 1–2 entries to "sources" backing it.
+- ONLY cite reputable domains: nih.gov, pubmed.ncbi.nlm.nih.gov, who.int, cdc.gov, mayoclinic.org, nhs.uk, menopause.org, acog.org, heart.org, health.harvard.edu, uspreventiveservicestaskforce.org, orthoinfo.org. Never invent URLs or cite blogs/social media. If unsure of a real URL, leave "sources" empty.
+- For casual chat (logging a meal, empathy, mood) leave "sources" empty.
 
 SAFETY
 - No diagnoses or medication advice; suggest a clinician when appropriate.
@@ -115,8 +149,8 @@ SAFETY
 - If they mention self-harm or wanting to die: respond with care and tell them to call or text 988 (US) or 911 in danger.
 
 Respond ONLY with JSON:
-{"reply": "...", "mood_read": {"valence": -1..1, "arousal": 0..1} or null, "actions": [{"type":"log_meal","meal":{"name":"...","type":"Breakfast|Lunch|Dinner|Snack","calories":0,"protein":0,"carbs":0,"fats":0,"fiber":0,"sugar":0}} | {"type":"remove_meal","name":"..."} | {"type":"log_hot_flash","intensity":2,"night":false,"count":1} | {"type":"log_bp","systolic":120,"diastolic":80} | {"type":"log_mood","mood":3}]}
-mood_read is YOUR read of their emotional tone from their words (null if neutral/unclear).`;
+{"reply": "...", "mood_read": {"valence": -1..1, "arousal": 0..1} or null, "sources": [{"title":"...","url":"https://..."}], "actions": [{"type":"log_meal","meal":{"name":"...","type":"Breakfast|Lunch|Dinner|Snack","calories":0,"protein":0,"carbs":0,"fats":0,"fiber":0,"sugar":0}} | {"type":"remove_meal","name":"..."} | {"type":"log_hot_flash","intensity":2,"night":false,"count":1} | {"type":"log_bp","systolic":120,"diastolic":80} | {"type":"log_mood","mood":3} | {"type":"log_period_start","date":"YYYY-MM-DD"}]}
+mood_read is YOUR read of their emotional tone from their words (null if neutral/unclear). "sources" is [] unless the reply makes a health claim worth backing with a reputable citation.`;
 }
 
 /**
