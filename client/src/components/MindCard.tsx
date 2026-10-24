@@ -14,11 +14,11 @@ import {
   SCREENER_ITEMS, SCREENER_OPTIONS, SUPPORT_RESOURCES, scoreScreener, interpretScreener,
 } from "@/lib/mentalHealth";
 
-const INK = "oklch(0.25 0.025 50)";
-const MUTED = "oklch(0.55 0.020 60)";
+const INK = "#F4F5F7";
+const MUTED = "#8B909A";
 const ACCENT = "var(--accent)";
 const CALM = "oklch(0.58 0.09 260)";
-const CARD = "oklch(0.99 0.010 78)";
+const CARD = "#17191F";
 const font = "'DM Sans', sans-serif";
 const DAY = 86_400_000;
 
@@ -76,9 +76,9 @@ export default function MindCard() {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <Brain size={17} style={{ color: CALM }} />
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: INK }}>Mind & Mood</p>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 700, color: INK }}>Mind & Mood</p>
         </div>
-        {m.demoMoods && <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "oklch(0.75 0.12 75 / 0.18)", color: "oklch(0.50 0.10 75)", fontFamily: font }}>DEMO MOODS</span>}
+        {m.demoMoods && <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "oklch(0.75 0.12 75 / 0.18)", color: "oklch(0.84 0.12 75)", fontFamily: font }}>DEMO MOODS</span>}
       </div>
       <p style={{ fontSize: 12, color: MUTED, fontFamily: font, marginBottom: 10 }}>From your check-ins, matched with sleep, HRV and your cycle.</p>
 
@@ -117,7 +117,7 @@ export default function MindCard() {
       )}
 
       {/* Weekly check */}
-      <div style={{ marginTop: 12, padding: 12, borderRadius: 14, background: "oklch(0.95 0.015 75)" }}>
+      <div style={{ marginTop: 12, padding: 12, borderRadius: 14, background: "var(--surface-2)" }}>
         <AnimatePresence initial={false} mode="wait">
           {!screening ? (
             <motion.div key="cta" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -144,7 +144,7 @@ export default function MindCard() {
                   <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 5 }}>
                     {SCREENER_OPTIONS.map((opt, v) => (
                       <button key={opt} onClick={() => setAnswers((a) => ({ ...a, [item.id]: v }))} aria-pressed={answers[item.id] === v}
-                        style={{ padding: "7px 8px", borderRadius: 10, fontSize: 11.5, fontWeight: 600, fontFamily: font, textAlign: "left", border: answers[item.id] === v ? `2px solid ${CALM}` : "1.5px solid oklch(0.88 0.020 72)", background: answers[item.id] === v ? "oklch(0.58 0.09 260 / 0.10)" : CARD, color: INK }}>
+                        style={{ padding: "7px 8px", borderRadius: 10, fontSize: 11.5, fontWeight: 600, fontFamily: font, textAlign: "left", border: answers[item.id] === v ? `2px solid ${CALM}` : "1.5px solid var(--line)", background: answers[item.id] === v ? "oklch(0.58 0.09 260 / 0.10)" : CARD, color: INK }}>
                         {opt}
                       </button>
                     ))}
@@ -152,9 +152,9 @@ export default function MindCard() {
                 </div>
               ))}
               <div className="flex gap-2">
-                <button onClick={() => { setScreening(false); setAnswers({}); }} style={{ padding: "9px 14px", borderRadius: 11, border: "1.5px solid oklch(0.88 0.020 72)", background: CARD, color: INK, fontWeight: 600, fontSize: 12.5, fontFamily: font }}>Cancel</button>
+                <button onClick={() => { setScreening(false); setAnswers({}); }} style={{ padding: "9px 14px", borderRadius: 11, border: "1.5px solid var(--line)", background: CARD, color: INK, fontWeight: 600, fontSize: 12.5, fontFamily: font }}>Cancel</button>
                 <button onClick={submitScreen} disabled={!answeredAll}
-                  style={{ flex: 1, padding: "9px", borderRadius: 11, border: "none", background: answeredAll ? CALM : "oklch(0.80 0.02 260)", color: "white", fontWeight: 700, fontSize: 12.5, fontFamily: font }}>
+                  style={{ flex: 1, padding: "9px", borderRadius: 11, border: "none", background: answeredAll ? CALM: "oklch(0.80 0.02 260)", color: "white", fontWeight: 700, fontSize: 12.5, fontFamily: font }}>
                   See result
                 </button>
               </div>
@@ -174,7 +174,7 @@ export default function MindCard() {
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden" }}>
             <div className="flex flex-col gap-1.5" style={{ paddingTop: 6 }}>
               {SUPPORT_RESOURCES.map((r) => (
-                <a key={r.label} href={r.href} className="flex items-center gap-3" style={{ padding: "10px 12px", borderRadius: 12, border: "1.5px solid oklch(0.88 0.020 72)", textDecoration: "none" }}>
+                <a key={r.label} href={r.href} className="flex items-center gap-3" style={{ padding: "10px 12px", borderRadius: 12, border: "1.5px solid var(--line)", textDecoration: "none" }}>
                   <Phone size={15} style={{ color: CALM, flexShrink: 0 }} />
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 700, color: INK, fontFamily: font }}>{r.label}</p>

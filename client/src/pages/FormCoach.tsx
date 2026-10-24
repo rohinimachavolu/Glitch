@@ -18,7 +18,7 @@ const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmark
 const GOOD   = "oklch(0.72 0.08 148)";
 const ADJUST = "oklch(0.78 0.10 75)";
 const BAD    = "oklch(0.62 0.16 30)";
-const MUTED  = "oklch(0.55 0.020 60)";
+const MUTED  = "#8B909A";
 
 // Shared across mounts so switching tabs doesn't re-download the model
 let landmarkerPromise: Promise<PoseLandmarker> | null = null;
@@ -183,7 +183,7 @@ export default function FormCoach() {
     ctx.globalAlpha = 1;
     lm.forEach((p, i) => {
       if (i < 11 || (p.visibility ?? 0) < 0.4) return;
-      ctx.fillStyle = bad.has(i) ? BAD : "white";
+      ctx.fillStyle = bad.has(i) ? BAD: "white";
       ctx.beginPath();
       ctx.arc(p.x * w, p.y * h, bad.has(i) ? 9 : 5, 0, Math.PI * 2);
       ctx.fill();
@@ -231,14 +231,14 @@ export default function FormCoach() {
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Eye size={20} style={{ color: "var(--accent)" }} />
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>
+            <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 24, fontWeight: 700, color: "var(--ink)" }}>
               Form Coach
             </h1>
           </div>
           <button
             onClick={() => setVoiceOn((v) => !v)}
             aria-label={voiceOn ? "Mute voice coach" : "Unmute voice coach"}
-            style={{ padding: 8, borderRadius: 12, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.99 0.010 78)", color: voiceOn ? "var(--accent)" : MUTED, display: "flex" }}
+            style={{ padding: 8, borderRadius: 12, border: "1.5px solid var(--line)", background: "var(--card-bg)", color: voiceOn ? "var(--accent)" : MUTED, display: "flex" }}
           >
             {voiceOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
@@ -255,13 +255,13 @@ export default function FormCoach() {
             onClick={() => setShowPicker(!showPicker)}
             style={{
               width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "14px 16px", borderRadius: 16, border: "1.5px solid oklch(0.88 0.020 72)",
-              background: "oklch(0.99 0.010 78)", boxShadow: "0 2px 10px oklch(0.25 0.025 50 / 0.05)",
+              padding: "14px 16px", borderRadius: 16, border: "1.5px solid var(--line)",
+              background: "var(--card-bg)", boxShadow: "0 2px 10px oklch(0.25 0.025 50 / 0.05)",
             }}
           >
             <div className="flex items-center gap-3">
               <span style={{ fontSize: 22 }}>{selected.emoji}</span>
-              <span style={{ fontSize: 15, fontWeight: 600, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
                 {selected.name}
               </span>
               {planMatches.has(selected.id) && <PlanBadge />}
@@ -272,8 +272,8 @@ export default function FormCoach() {
           {showPicker && (
             <div
               style={{
-                position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "oklch(0.99 0.010 78)",
-                borderRadius: 16, border: "1.5px solid oklch(0.88 0.020 72)", boxShadow: "0 8px 24px oklch(0.25 0.025 50 / 0.12)",
+                position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "var(--card-bg)",
+                borderRadius: 16, border: "1.5px solid var(--line)", boxShadow: "0 8px 24px oklch(0.25 0.025 50 / 0.12)",
                 zIndex: 20, overflow: "hidden",
               }}
             >
@@ -284,11 +284,11 @@ export default function FormCoach() {
                   style={{
                     width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
                     background: selected.id === ex.id ? "color-mix(in oklch, var(--accent) 8%, transparent)" : "transparent",
-                    border: "none", borderBottom: "1px solid oklch(0.88 0.020 72)", cursor: "pointer",
+                    border: "none", borderBottom: "1px solid var(--line)", cursor: "pointer",
                   }}
                 >
                   <span style={{ fontSize: 20 }}>{ex.emoji}</span>
-                  <span style={{ fontSize: 14, fontWeight: 500, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{ex.name}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>{ex.name}</span>
                   {planMatches.has(ex.id) && <PlanBadge />}
                 </button>
               ))}
@@ -297,7 +297,7 @@ export default function FormCoach() {
         </div>
 
         {/* Camera view */}
-        <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "oklch(0.20 0.025 50)", aspectRatio: "3/4" }}>
+        <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "var(--ink)", aspectRatio: "3/4" }}>
           {/* Mirrored like a selfie; canvas mirrored identically so the skeleton lines up */}
           <video ref={videoRef} autoPlay playsInline muted
             style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)", display: live ? "block" : "none" }} />
@@ -305,7 +305,7 @@ export default function FormCoach() {
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)", pointerEvents: "none", display: live ? "block" : "none" }} />
 
           {!live && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 24, background: "oklch(0.15 0.025 50)", textAlign: "center" }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 24, background: "var(--ink)", textAlign: "center" }}>
               {status === "loading" ? (
                 <>
                   <Loader2 size={32} style={{ color: "oklch(0.75 0.015 60)", animation: "spin 1s linear infinite" }} />
@@ -317,7 +317,7 @@ export default function FormCoach() {
                 <>
                   <div style={{ fontSize: 56, opacity: 0.35 }}>{selected.emoji}</div>
                   <p style={{ color: "oklch(0.80 0.015 60)", fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Setup</p>
-                  <p style={{ color: "oklch(0.68 0.015 60)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", maxWidth: 240 }}>{selected.setup}</p>
+                  <p style={{ color: "var(--txt-muted)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", maxWidth: 240 }}>{selected.setup}</p>
                 </>
               )}
             </div>
@@ -372,15 +372,15 @@ export default function FormCoach() {
         {summary && <SummaryCard s={summary} />}
 
         {/* Cues */}
-        <div style={{ background: "oklch(0.99 0.010 78)", borderRadius: 18, padding: "16px", boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 10, fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ background: "var(--card-bg)", borderRadius: 18, padding: "16px", boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 10, fontFamily: "'DM Sans', sans-serif" }}>
             What the camera checks — {selected.name}
           </p>
           <div className="flex flex-col gap-2">
             {selected.cues.map((cue, i) => (
-              <div key={i} style={{ padding: "8px 12px", borderRadius: 10, background: "oklch(0.93 0.018 75)", display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <div key={i} style={{ padding: "8px 12px", borderRadius: 10, background: "var(--surface-2)", display: "flex", alignItems: "flex-start", gap: 8 }}>
                 <span style={{ fontSize: 14, color: "var(--accent)" }}>•</span>
-                <span style={{ fontSize: 13, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{cue}</span>
+                <span style={{ fontSize: 13, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>{cue}</span>
               </div>
             ))}
           </div>
@@ -394,7 +394,7 @@ export default function FormCoach() {
 
 function PlanBadge() {
   return (
-    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "oklch(0.72 0.08 148 / 0.15)", color: "oklch(0.45 0.08 148)", fontFamily: "'DM Sans', sans-serif" }}>
+    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "oklch(0.72 0.08 148 / 0.15)", color: "oklch(0.84 0.1 148)", fontFamily: "'DM Sans', sans-serif" }}>
       In your plan
     </span>
   );
@@ -405,8 +405,8 @@ function SummaryCard({ s }: { s: SessionSummary }) {
   const pct = s.reps ? Math.round((s.cleanReps / s.reps) * 100) : 0;
   const scoreColor = pct >= 80 ? GOOD : pct >= 50 ? ADJUST : BAD;
   return (
-    <div style={{ background: "oklch(0.99 0.010 78)", borderRadius: 18, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" }}>
-      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: "oklch(0.25 0.025 50)", marginBottom: 12 }}>
+    <div style={{ background: "var(--card-bg)", borderRadius: 18, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" }}>
+      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--ink)", marginBottom: 12 }}>
         Session summary · {s.exercise}
       </p>
       <div className="grid" style={{ gridTemplateColumns: isHold ? "1fr" : "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
@@ -414,13 +414,13 @@ function SummaryCard({ s }: { s: SessionSummary }) {
           <Stat label="Good-form hold" value={`${Math.floor(s.holdSeconds!)}s`} color={GOOD} />
         ) : (
           <>
-            <Stat label="Reps" value={`${s.reps}`} color="oklch(0.25 0.025 50)" />
+            <Stat label="Reps" value={`${s.reps}`} color="var(--ink)" />
             <Stat label="Clean reps" value={`${s.cleanReps}`} color={GOOD} />
             <Stat label="Form score" value={s.reps ? `${pct}%` : "—"} color={s.reps ? scoreColor : MUTED} />
           </>
         )}
       </div>
-      <p style={{ fontSize: 13, color: "oklch(0.40 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+      <p style={{ fontSize: 13, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
         {s.topFault ? <>Focus next time: <b>{s.topFault}</b></> : "No recurring form issues detected — nice work."}
       </p>
     </div>
@@ -429,7 +429,7 @@ function SummaryCard({ s }: { s: SessionSummary }) {
 
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div style={{ background: "oklch(0.93 0.018 75)", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+    <div style={{ background: "var(--surface-2)", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
       <p style={{ fontSize: 20, fontWeight: 700, color, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.1 }}>{value}</p>
       <p style={{ fontSize: 10, color: MUTED, fontFamily: "'DM Sans', sans-serif", marginTop: 2 }}>{label}</p>
     </div>

@@ -2,7 +2,7 @@
  * Glitch — adaptive theme.
  * The accent colour, background tint and greeting follow the user's cycle phase or life stage
  * (and age for everyone else), so the app feels like it's "in sync" with them.
- * Colours stay in a readable lightness band (L ≈ 0.55–0.66) for contrast on light backgrounds.
+ * Accent lightness is lifted for the dark design system; text on accent uses var(--on-accent).
  */
 import type { CyclePhase, UserProfile } from "@/contexts/AppContext";
 
@@ -20,12 +20,13 @@ export interface Theme {
 }
 
 function make(key: string, l: number, c: number, h: number, emoji: string, label: string, vibe: string, fontScale = 1): Theme {
+  // Dark design system: brighten the accent so it pops on near-black, keep a faint hue tint in the page
   return {
     key, hue: h,
-    accent: `oklch(${l} ${c} ${h})`,
-    accentDeep: `oklch(${Math.max(0.35, l - 0.17)} ${c} ${h})`,
-    bg: `oklch(0.975 0.014 ${h})`,
-    outer: `oklch(0.93 0.025 ${h})`,
+    accent: `oklch(${Math.min(0.82, l + 0.16)} ${c} ${h})`,
+    accentDeep: `oklch(${Math.min(0.9, l + 0.27)} ${(c * 0.8).toFixed(3)} ${h})`,
+    bg: `oklch(0.165 0.008 ${h})`,
+    outer: "#07080A",
     emoji, label, vibe, fontScale,
   };
 }

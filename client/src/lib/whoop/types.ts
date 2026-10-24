@@ -113,6 +113,10 @@ export interface DailyPhysiology {
   sleepEfficiency?: number | null;
   /** Minutes awake after falling asleep (WASO proxy) */
   awakeMinutes?: number | null;
+  /** Sleep stages (minutes) */
+  lightMinutes?: number | null;
+  deepMinutes?: number | null;
+  remMinutes?: number | null;
 }
 
 const dayOf = (iso: string) => iso.slice(0, 10);
@@ -150,6 +154,9 @@ export function toDaily(data: WhoopData): DailyPhysiology[] {
     r.disturbances = st.disturbance_count;
     r.sleepEfficiency = s.score.sleep_efficiency_percentage;
     r.awakeMinutes = Math.round(st.total_awake_time_milli / 60_000);
+    r.lightMinutes = Math.round(st.total_light_sleep_time_milli / 60_000);
+    r.deepMinutes = Math.round(st.total_slow_wave_sleep_time_milli / 60_000);
+    r.remMinutes = Math.round(st.total_rem_sleep_time_milli / 60_000);
   }
   for (const c of data.cycles) {
     if (c.score_state !== "SCORED" || !c.score) continue;

@@ -11,8 +11,8 @@ import { useHealthInsights } from "@/hooks/useHealthInsights";
 import type { OvulationResult } from "@/lib/healthMetrics";
 import { hormoneNotes } from "@/lib/hormones";
 
-const INK = "oklch(0.25 0.025 50)";
-const MUTED = "oklch(0.55 0.020 60)";
+const INK = "#F4F5F7";
+const MUTED = "#8B909A";
 const GOOD = "oklch(0.62 0.11 148)";
 const WARN = "oklch(0.62 0.14 40)";
 const font = "'DM Sans', sans-serif";
@@ -22,15 +22,15 @@ const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en
 const STATUS: Record<OvulationResult["status"], { label: string; color: string; bg: string; icon: string }> = {
   confirmed:         { label: "Ovulated",         color: GOOD,  bg: "oklch(0.62 0.11 148 / 0.12)", icon: "✓" },
   not_detected:      { label: "No shift found",   color: WARN,  bg: "oklch(0.62 0.14 40 / 0.12)",  icon: "!" },
-  pending:           { label: "In progress",      color: MUTED, bg: "oklch(0.90 0.015 72)",        icon: "…" },
-  insufficient_data: { label: "Not enough data",  color: MUTED, bg: "oklch(0.90 0.015 72)",        icon: "?" },
+  pending:           { label: "In progress",      color: MUTED, bg: "var(--surface-2)",        icon: "…" },
+  insufficient_data: { label: "Not enough data",  color: MUTED, bg: "var(--surface-2)",        icon: "?" },
 };
 
 export default function OvulationCard() {
   const { profile, connectWhoopDemo } = useApp();
   const h = useHealthInsights();
   const wh = profile?.womensHealth;
-  const card = { background: "oklch(0.99 0.010 78)", borderRadius: 20, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" };
+  const card = { background: "var(--card-bg)", borderRadius: 20, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" };
 
   if (hasActiveCycle(profile) && !tracksOvulation(profile)) {
     return (
@@ -51,7 +51,7 @@ export default function OvulationCard() {
           After ovulation, progesterone raises skin temperature ~0.3 °C and resting heart rate a few beats. WHOOP measures both every night, so Glitch can confirm whether you actually ovulated, instead of guessing from the calendar.
         </p>
         <motion.button whileTap={{ scale: 0.96 }} onClick={connectWhoopDemo}
-          style={{ padding: "9px 14px", borderRadius: 12, border: "none", background: "var(--accent)", color: "white", fontWeight: 700, fontSize: 12.5, fontFamily: font }}>
+          style={{ padding: "9px 14px", borderRadius: 12, border: "none", background: "var(--accent)", color: "var(--on-accent)", fontWeight: 700, fontSize: 12.5, fontFamily: font }}>
           Try with demo WHOOP data
         </motion.button>
       </div>
@@ -139,8 +139,8 @@ export default function OvulationCard() {
 function Title() {
   return (
     <div className="flex items-center justify-between mb-2">
-      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: INK }}>Did I ovulate?</p>
-      <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 12%, transparent)", color: "oklch(0.52 0.12 38)", fontFamily: font }}>WHOOP-CONFIRMED</span>
+      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 700, color: INK }}>Did I ovulate?</p>
+      <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 12%, transparent)", color: "oklch(0.84 0.14 38)", fontFamily: font }}>WHOOP-CONFIRMED</span>
     </div>
   );
 }

@@ -62,14 +62,14 @@ function AppShell() {
   };
 
   return (
-    <div className="phone-shell" style={{ boxShadow: "0 0 0 1px oklch(0.88 0.020 72), 0 24px 80px oklch(0.25 0.025 50 / 0.18)" }}>
-      <div style={{ overflowY: "auto", height: "100dvh", paddingBottom: 80, scrollbarWidth: "none" }}>
+    <div className="phone-shell" style={{ boxShadow: "0 0 0 1px var(--surface-2), 0 24px 80px oklch(0.25 0.025 50 / 0.18)" }}>
+      <div style={{ overflowY: "auto", height: "100dvh", paddingBottom: 80, scrollbarWidth: "none", background: "var(--app-bg)" }}>
         {pages[activeTab] ?? <Dashboard />}
       </div>
       <ThemeSync />
       <Confetti />
-      <BottomNav active={activeTab} onChange={setActiveTab} isFemale={isFemale} />
-      {!coachOpen && activeTab !== "form" && <CoachFab onOpen={() => setCoachOpen(true)} />}
+      <BottomNav active={activeTab} onChange={setActiveTab} isFemale={isFemale}  />
+      {!coachOpen && activeTab !== "form" && !(menopauseMode && activeTab === "home") && <CoachFab onOpen={() => setCoachOpen(true)} />}
       <CoachChat open={coachOpen} onClose={() => { setCoachOpen(false); setCoachListen(false); }} initialPrompt={coachPrompt} onPromptUsed={() => setCoachPrompt(null)} autoListen={coachListen} />
     </div>
   );
@@ -78,10 +78,10 @@ function AppShell() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <AppProvider>
-            <Toaster position="top-center" richColors />
+            <Toaster position="top-center" richColors theme="dark" />
             <div style={{ minHeight: "100dvh", background: "var(--app-outer)", transition: "background 0.8s", display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
               <AppShell />
             </div>

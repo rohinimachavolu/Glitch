@@ -39,13 +39,13 @@ function NutritionScore({ meals, goals }: {
   return (
     <div
       style={{
-        background: "oklch(0.99 0.010 78)",
+        background: "var(--card-bg)",
         borderRadius: 20,
         padding: "16px",
         boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
       }}
     >
-      <p style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
+      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
         Weekly Nutrition Score
       </p>
       <div className="flex items-center gap-4">
@@ -54,7 +54,7 @@ function NutritionScore({ meals, goals }: {
             width: 72,
             height: 72,
             borderRadius: "50%",
-            background: `conic-gradient(${badge.color} ${score}%, oklch(0.88 0.020 72) 0%)`,
+            background: `conic-gradient(${badge.color} ${score}%, var(--surface-2) 0%)`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -66,7 +66,7 @@ function NutritionScore({ meals, goals }: {
               width: 54,
               height: 54,
               borderRadius: "50%",
-              background: "oklch(0.99 0.010 78)",
+              background: "var(--card-bg)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -93,7 +93,7 @@ function NutritionScore({ meals, goals }: {
           >
             {badge.label}
           </span>
-          <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
+          <p style={{ fontSize: 12, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>
             Based on your logged meals today
           </p>
         </div>
@@ -154,10 +154,10 @@ export default function Progress() {
     <div className="flex flex-col gap-0 pb-2">
       {/* Header */}
       <div style={{ padding: "20px 20px 12px" }}>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>
+        <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 24, fontWeight: 700, color: "var(--ink)" }}>
           Your Progress
         </h1>
-        <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>
+        <p style={{ fontSize: 13, color: "var(--txt-muted)", marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>
           {hasAnyData ? "Here's how you're doing this week." : "Start logging meals to see your progress here."}
         </p>
       </div>
@@ -176,16 +176,16 @@ export default function Progress() {
             style={{
               padding: "32px 16px",
               borderRadius: 20,
-              background: "oklch(0.99 0.010 78)",
+              background: "var(--card-bg)",
               textAlign: "center",
-              border: "1.5px dashed oklch(0.88 0.020 72)",
+              border: "1.5px dashed var(--line)",
             }}
           >
             <p style={{ fontSize: 40, marginBottom: 10 }}>📊</p>
-            <p style={{ fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
               No data yet
             </p>
-            <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>
+            <p style={{ fontSize: 13, color: "var(--txt-muted)", marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>
               Log your first meal to start tracking your progress.
             </p>
           </div>
@@ -196,7 +196,7 @@ export default function Progress() {
           <div
             className="animate-fade-up animate-fade-up-delay-1"
             style={{
-              background: "oklch(0.99 0.010 78)",
+              background: "var(--card-bg)",
               borderRadius: 20,
               padding: "16px",
               boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
@@ -211,8 +211,8 @@ export default function Progress() {
                     padding: "6px 14px",
                     borderRadius: 999,
                     border: "none",
-                    background: chartTab === t ? "var(--accent)" : "oklch(0.93 0.018 75)",
-                    color: chartTab === t ? "white" : "oklch(0.45 0.025 50)",
+                    background: chartTab === t ? "var(--accent)" : "var(--surface-2)",
+                    color: chartTab === t ? "white" : "var(--ink)",
                     fontSize: 12,
                     fontWeight: 600,
                     fontFamily: "'DM Sans', sans-serif",
@@ -226,7 +226,7 @@ export default function Progress() {
 
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.88 0.020 72)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#2A2D36" vertical={false} />
                 <XAxis
                   dataKey="day"
                   tick={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", fill: "oklch(0.55 0.020 60)" }}
@@ -240,8 +240,8 @@ export default function Progress() {
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "oklch(0.99 0.010 78)",
-                    border: "1px solid oklch(0.88 0.020 72)",
+                    background: "var(--card-bg)",
+                    border: "1px solid var(--line)",
                     borderRadius: 12,
                     fontSize: 12,
                     fontFamily: "'DM Sans', sans-serif",
@@ -252,7 +252,7 @@ export default function Progress() {
                 <Bar dataKey="value" fill={barColor} radius={[6, 6, 0, 0]} maxBarSize={32} />
               </BarChart>
             </ResponsiveContainer>
-            <p style={{ fontSize: 11, color: "oklch(0.65 0.015 60)", marginTop: 4, fontFamily: "'DM Sans', sans-serif", textAlign: "center" }}>
+            <p style={{ fontSize: 11, color: "var(--txt-muted)", marginTop: 4, fontFamily: "'DM Sans', sans-serif", textAlign: "center" }}>
               ★ = today · Past days show as you log more over time
             </p>
           </div>
@@ -263,13 +263,13 @@ export default function Progress() {
           <div
             className="animate-fade-up animate-fade-up-delay-2"
             style={{
-              background: "oklch(0.99 0.010 78)",
+              background: "var(--card-bg)",
               borderRadius: 20,
               padding: "16px",
               boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
             }}
           >
-            <p style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
               Today's Summary
             </p>
             <div className="flex flex-col gap-2">
@@ -284,12 +284,12 @@ export default function Progress() {
                 return (
                   <div key={label}>
                     <div className="flex justify-between mb-1">
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
-                      <span style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
+                      <span style={{ fontSize: 11, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>
                         {val}{unit} / {target}{unit}
                       </span>
                     </div>
-                    <div style={{ height: 6, borderRadius: 999, background: "oklch(0.88 0.020 72)", overflow: "hidden" }}>
+                    <div style={{ height: 6, borderRadius: 999, background: "var(--surface-2)", overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${pct}%`, borderRadius: 999, background: color, transition: "width 0.8s cubic-bezier(0.23,1,0.32,1)" }} />
                     </div>
                   </div>
@@ -303,14 +303,14 @@ export default function Progress() {
         <div
           className="animate-fade-up animate-fade-up-delay-3"
           style={{
-            background: "oklch(0.99 0.010 78)",
+            background: "var(--card-bg)",
             borderRadius: 20,
             padding: "16px",
             boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
           }}
         >
           <div className="flex items-center justify-between mb-3">
-            <p style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
               Weight Log (kg)
             </p>
             <div className="flex gap-2 items-center">
@@ -324,12 +324,12 @@ export default function Progress() {
                   width: 64,
                   padding: "5px 8px",
                   borderRadius: 10,
-                  border: "1.5px solid oklch(0.88 0.020 72)",
+                  border: "1.5px solid var(--line)",
                   fontSize: 13,
                   fontFamily: "'DM Sans', sans-serif",
-                  color: "oklch(0.25 0.025 50)",
+                  color: "var(--ink)",
                   outline: "none",
-                  background: "oklch(0.97 0.015 75)",
+                  background: "var(--app-bg)",
                 }}
               />
               <button
@@ -352,14 +352,14 @@ export default function Progress() {
 
           {weightLog.length === 0 ? (
             <div style={{ textAlign: "center", padding: "16px 0" }}>
-              <p style={{ fontSize: 13, color: "oklch(0.65 0.015 60)", fontFamily: "'DM Sans', sans-serif" }}>
+              <p style={{ fontSize: 13, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>
                 No weight entries yet. Log your first reading above.
               </p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={150}>
               <LineChart data={weightLog} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.88 0.020 72)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#2A2D36" vertical={false} />
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", fill: "oklch(0.55 0.020 60)" }}
@@ -374,8 +374,8 @@ export default function Progress() {
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "oklch(0.99 0.010 78)",
-                    border: "1px solid oklch(0.88 0.020 72)",
+                    background: "var(--card-bg)",
+                    border: "1px solid var(--line)",
                     borderRadius: 12,
                     fontSize: 12,
                     fontFamily: "'DM Sans', sans-serif",

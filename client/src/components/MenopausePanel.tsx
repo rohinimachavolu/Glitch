@@ -15,12 +15,12 @@ import { useMenopauseInsights } from "@/hooks/useMenopauseInsights";
 import { MRS_ITEMS, MRS_OPTIONS, scoreMrs, type MenoStage } from "@/lib/menopause";
 import HotflashRiskCard from "./HotflashRiskCard";
 
-const INK = "oklch(0.25 0.025 50)";
-const MUTED = "oklch(0.55 0.020 60)";
+const INK = "#F4F5F7";
+const MUTED = "#8B909A";
 const HEAT = "oklch(0.63 0.17 35)";
 const COOL = "oklch(0.60 0.07 230)";
 const SAGE = "oklch(0.60 0.10 148)";
-const CARD_BG = "oklch(0.99 0.010 78)";
+const CARD_BG = "#17191F";
 const font = "'DM Sans', sans-serif";
 const card = { background: CARD_BG, borderRadius: 20, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" };
 
@@ -58,11 +58,11 @@ export default function MenopausePanel() {
   return (
     <div className="flex flex-col gap-4 px-4 pt-3">
       {/* Stage */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ ...card, background: "linear-gradient(150deg, oklch(0.63 0.17 35 / 0.12) 0%, oklch(0.99 0.010 78) 70%)" }}>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ ...card, background: "linear-gradient(150deg, oklch(0.63 0.17 35 / 0.12) 0%, var(--card-bg) 70%)" }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: MUTED, fontFamily: font, letterSpacing: 0.4 }}>WHERE YOU ARE</p>
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, fontWeight: 700, color: INK }}>{m.stage.label}</p>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 21, fontWeight: 700, color: INK }}>{m.stage.label}</p>
         {m.stage.timing && m.stage.timing !== "typical" && (
-          <span style={{ display: "inline-block", marginTop: 4, fontSize: 10.5, fontWeight: 800, padding: "3px 8px", borderRadius: 999, background: "oklch(0.63 0.17 35 / 0.15)", color: "oklch(0.48 0.16 35)", fontFamily: font }}>
+          <span style={{ display: "inline-block", marginTop: 4, fontSize: 10.5, fontWeight: 800, padding: "3px 8px", borderRadius: 999, background: "oklch(0.63 0.17 35 / 0.15)", color: "oklch(0.84 0.18 35)", fontFamily: font }}>
             {m.stage.timing === "premature" ? "PREMATURE MENOPAUSE (BEFORE 40)" : "EARLY MENOPAUSE (BEFORE 45)"}
           </span>
         )}
@@ -70,7 +70,7 @@ export default function MenopausePanel() {
           <div className="flex gap-1 mt-3">
             {TIMELINE.map((t, i) => (
               <div key={t.id} style={{ flex: 1 }}>
-                <div style={{ height: 6, borderRadius: 999, background: i <= idx ? HEAT : "oklch(0.88 0.020 72)", opacity: i === idx ? 1 : i < idx ? 0.45 : 1 }} />
+                <div style={{ height: 6, borderRadius: 999, background: i <= idx ? HEAT: "var(--surface-2)", opacity: i === idx ? 1 : i < idx ? 0.45 : 1 }} />
                 <p style={{ fontSize: 9.5, color: i === idx ? INK : MUTED, fontWeight: i === idx ? 700 : 500, fontFamily: font, marginTop: 3, textAlign: "center" }}>{t.short}</p>
               </div>
             ))}
@@ -80,7 +80,7 @@ export default function MenopausePanel() {
         {editingDate ? (
           <input type="date" autoFocus defaultValue={profile.womensHealth?.lastPeriodDate} max={new Date().toISOString().slice(0, 10)}
             onBlur={(e) => { if (e.target.value) updateWomensHealth({ lastPeriodDate: e.target.value }); setEditingDate(false); }}
-            style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, border: "1.5px solid oklch(0.88 0.020 72)", fontFamily: font, fontSize: 13 }} />
+            style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, border: "1.5px solid var(--line)", fontFamily: font, fontSize: 13 }} />
         ) : (
           <button onClick={() => setEditingDate(true)} style={{ marginTop: 8, border: "none", background: "transparent", color: HEAT, fontWeight: 700, fontSize: 12, fontFamily: font, padding: 0 }}>
             {profile.womensHealth?.lastPeriodDate ? "Update last period date" : "+ Add your last period date"}
@@ -102,7 +102,7 @@ export default function MenopausePanel() {
         <div className="flex gap-1.5 mb-2">
           {([1, 2, 3] as const).map((i) => (
             <button key={i} onClick={() => setIntensity(i)} aria-pressed={intensity === i}
-              style={{ flex: 1, padding: "7px 0", borderRadius: 10, fontSize: 12, fontWeight: 700, fontFamily: font, border: intensity === i ? `2px solid ${HEAT}` : "1.5px solid oklch(0.88 0.020 72)", background: intensity === i ? "oklch(0.63 0.17 35 / 0.08)" : CARD_BG, color: INK }}>
+              style={{ flex: 1, padding: "7px 0", borderRadius: 10, fontSize: 12, fontWeight: 700, fontFamily: font, border: intensity === i ? `2px solid ${HEAT}` : "1.5px solid var(--line)", background: intensity === i ? "oklch(0.63 0.17 35 / 0.08)" : CARD_BG, color: INK }}>
               {["", "Mild", "Moderate", "Severe"][i]}
             </button>
           ))}
@@ -168,7 +168,7 @@ export default function MenopausePanel() {
         <p style={{ fontSize: 11, fontWeight: 700, color: MUTED, fontFamily: font, letterSpacing: 0.4 }}>TODAY'S TRAINING</p>
         <p style={{ fontSize: 17, fontWeight: 800, color: INK, fontFamily: font, marginTop: 2 }}>{m.training.today.emoji} {m.training.today.focus}</p>
         {m.training.adjusted && (
-          <p style={{ fontSize: 12, color: "oklch(0.45 0.10 230)", fontFamily: font, marginTop: 6, padding: "8px 10px", borderRadius: 10, background: "oklch(0.60 0.07 230 / 0.10)", lineHeight: 1.45 }}>↻ {m.training.adjusted}</p>
+          <p style={{ fontSize: 12, color: "oklch(0.84 0.12 230)", fontFamily: font, marginTop: 6, padding: "8px 10px", borderRadius: 10, background: "oklch(0.60 0.07 230 / 0.10)", lineHeight: 1.45 }}>↻ {m.training.adjusted}</p>
         )}
         <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
           {m.training.today.session.map((s) => <li key={s} style={{ fontSize: 13, color: INK, fontFamily: font, marginBottom: 3 }}>{s}</li>)}
@@ -178,7 +178,7 @@ export default function MenopausePanel() {
           {m.training.week.map((d, i) => {
             const isToday = i === (new Date().getDay() + 6) % 7;
             return (
-              <div key={d.day} style={{ flex: 1, textAlign: "center", padding: "6px 0", borderRadius: 10, background: isToday ? "oklch(0.63 0.17 35 / 0.12)" : "oklch(0.95 0.015 75)", border: isToday ? `1.5px solid ${HEAT}` : "1.5px solid transparent" }}>
+              <div key={d.day} style={{ flex: 1, textAlign: "center", padding: "6px 0", borderRadius: 10, background: isToday ? "oklch(0.63 0.17 35 / 0.12)" : "var(--surface-2)", border: isToday ? `1.5px solid ${HEAT}` : "1.5px solid transparent" }}>
                 <p style={{ fontSize: 15 }}>{d.emoji}</p>
                 <p style={{ fontSize: 9.5, fontWeight: 700, color: isToday ? INK : MUTED, fontFamily: font }}>{d.day}</p>
               </div>
@@ -220,7 +220,7 @@ export default function MenopausePanel() {
             {[["Body", m.lastMrs.somatic, 16], ["Mind", m.lastMrs.psychological, 16], ["Urogenital", m.lastMrs.urogenital, 12]].map(([l, v, max]) => (
               <div key={l as string} className="flex items-center gap-2" style={{ marginTop: 6 }}>
                 <span style={{ width: 74, fontSize: 11.5, color: MUTED, fontFamily: font }}>{l}</span>
-                <div style={{ flex: 1, height: 7, borderRadius: 999, background: "oklch(0.92 0.015 72)", overflow: "hidden" }}>
+                <div style={{ flex: 1, height: 7, borderRadius: 999, background: "var(--surface-2)", overflow: "hidden" }}>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${((v as number) / (max as number)) * 100}%` }} style={{ height: "100%", background: HEAT, borderRadius: 999 }} />
                 </div>
                 <span style={{ width: 34, fontSize: 11.5, color: INK, fontFamily: font, textAlign: "right" }}>{v}/{max}</span>
@@ -239,7 +239,7 @@ export default function MenopausePanel() {
                   <div className="flex gap-1">
                     {MRS_OPTIONS.map((o, v) => (
                       <button key={o} onClick={() => setAnswers((a) => ({ ...a, [item.id]: v }))} aria-pressed={answers[item.id] === v} title={o}
-                        style={{ flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 10.5, fontWeight: 600, fontFamily: font, border: answers[item.id] === v ? `2px solid ${HEAT}` : "1.5px solid oklch(0.88 0.020 72)", background: answers[item.id] === v ? "oklch(0.63 0.17 35 / 0.10)" : CARD_BG, color: INK }}>
+                        style={{ flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 10.5, fontWeight: 600, fontFamily: font, border: answers[item.id] === v ? `2px solid ${HEAT}` : "1.5px solid var(--line)", background: answers[item.id] === v ? "oklch(0.63 0.17 35 / 0.10)" : CARD_BG, color: INK }}>
                         {o.replace("Very severe", "V. severe")}
                       </button>
                     ))}
@@ -273,7 +273,7 @@ export default function MenopausePanel() {
 
 function Stat({ value, label, good }: { value: string; label: string; good?: boolean }) {
   return (
-    <div style={{ flex: 1, padding: "8px 6px", borderRadius: 12, background: "oklch(0.95 0.015 75)", textAlign: "center" }}>
+    <div style={{ flex: 1, padding: "8px 6px", borderRadius: 12, background: "var(--surface-2)", textAlign: "center" }}>
       <p style={{ fontSize: 19, fontWeight: 800, color: good == null ? INK : good ? SAGE : HEAT, fontFamily: font, lineHeight: 1.1 }}>{value}</p>
       <p style={{ fontSize: 9.5, color: MUTED, fontFamily: font, marginTop: 2 }}>{label}</p>
     </div>
@@ -281,5 +281,5 @@ function Stat({ value, label, good }: { value: string; label: string; good?: boo
 }
 
 function Demo() {
-  return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "oklch(0.75 0.12 75 / 0.18)", color: "oklch(0.50 0.10 75)", fontFamily: font }}>DEMO</span>;
+  return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "oklch(0.75 0.12 75 / 0.18)", color: "oklch(0.84 0.12 75)", fontFamily: font }}>DEMO</span>;
 }

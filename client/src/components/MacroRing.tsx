@@ -51,7 +51,7 @@ export default function MacroRing({
             cy={size / 2}
             r={r}
             fill="none"
-            stroke="oklch(0.88 0.020 72)"
+            stroke="#2A2D36"
             strokeWidth={strokeWidth}
           />
           {/* Progress */}
@@ -77,10 +77,10 @@ export default function MacroRing({
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: 15, fontWeight: 700, color: "oklch(0.25 0.025 50)", lineHeight: 1 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", lineHeight: 1 }}>
             {value}
           </span>
-          <span style={{ fontSize: 9, color: "oklch(0.55 0.020 60)", marginTop: 1 }}>
+          <span style={{ fontSize: 9, color: "var(--txt-muted)", marginTop: 1 }}>
             /{target}{unit}
           </span>
         </div>
@@ -89,7 +89,7 @@ export default function MacroRing({
         style={{
           fontSize: 11,
           fontWeight: 500,
-          color: "oklch(0.45 0.025 50)",
+          color: "var(--ink)",
           fontFamily: "'DM Sans', sans-serif",
         }}
       >

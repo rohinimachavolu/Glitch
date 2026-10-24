@@ -136,10 +136,10 @@ export default function LogFood() {
     <div className="flex flex-col gap-0 pb-2">
       {/* Header */}
       <div style={{ padding: "20px 20px 12px" }}>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>
+        <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 24, fontWeight: 700, color: "var(--ink)" }}>
           Log a Meal
         </h1>
-        <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>
+        <p style={{ fontSize: 13, color: "var(--txt-muted)", marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>
           Take a photo — AI will identify your food and calculate nutrition.
         </p>
       </div>
@@ -154,9 +154,9 @@ export default function LogFood() {
               style={{
                 padding: "8px 16px",
                 borderRadius: 999,
-                border: mealType === t ? "none" : "1.5px solid oklch(0.88 0.020 72)",
-                background: mealType === t ? "var(--accent)" : "oklch(0.99 0.010 78)",
-                color: mealType === t ? "white" : "oklch(0.45 0.025 50)",
+                border: mealType === t ? "none" : "1.5px solid var(--line)",
+                background: mealType === t ? "var(--accent)" : "var(--card-bg)",
+                color: mealType === t ? "white" : "var(--ink)",
                 fontSize: 13,
                 fontWeight: 500,
                 fontFamily: "'DM Sans', sans-serif",
@@ -206,10 +206,10 @@ export default function LogFood() {
               <Camera size={28} color="white" />
             </div>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
                 Take or upload a photo
               </p>
-              <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
+              <p style={{ fontSize: 12, color: "var(--txt-muted)", marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
                 AI will identify your food instantly
               </p>
             </div>
@@ -281,7 +281,7 @@ export default function LogFood() {
                 }}
               >
                 <AlertCircle size={18} style={{ color: "var(--accent)", flexShrink: 0, marginTop: 1 }} />
-                <p style={{ fontSize: 13, color: "oklch(0.40 0.08 38)", fontFamily: "'DM Sans', sans-serif" }}>
+                <p style={{ fontSize: 13, color: "oklch(0.84 0.1 38)", fontFamily: "'DM Sans', sans-serif" }}>
                   {analyzeError}
                 </p>
               </div>
@@ -292,7 +292,7 @@ export default function LogFood() {
               <>
                 <div
                   style={{
-                    background: "oklch(0.99 0.010 78)",
+                    background: "var(--card-bg)",
                     borderRadius: 18,
                     padding: "16px",
                     boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
@@ -321,11 +321,11 @@ export default function LogFood() {
                       </span>
                     )}
                   </div>
-                  <p style={{ fontSize: 16, fontWeight: 700, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif", marginBottom: 6 }}>
+                  <p style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif", marginBottom: 6 }}>
                     {analyzed.name}
                   </p>
                   {analyzed.notes && (
-                    <p style={{ fontSize: 12, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif", marginBottom: 10, fontStyle: "italic" }}>
+                    <p style={{ fontSize: 12, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif", marginBottom: 10, fontStyle: "italic" }}>
                       {analyzed.notes}
                     </p>
                   )}
@@ -343,17 +343,17 @@ export default function LogFood() {
                         style={{
                           padding: "6px 12px",
                           borderRadius: 10,
-                          background: "oklch(0.93 0.018 75)",
+                          background: "var(--surface-2)",
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
                           minWidth: 58,
                         }}
                       >
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
                           {v}{u}
                         </span>
-                        <span style={{ fontSize: 10, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>{l}</span>
+                        <span style={{ fontSize: 10, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>{l}</span>
                       </div>
                     ))}
                   </div>
@@ -362,13 +362,13 @@ export default function LogFood() {
                 {/* Add-ons */}
                 <div
                   style={{
-                    background: "oklch(0.99 0.010 78)",
+                    background: "var(--card-bg)",
                     borderRadius: 18,
                     padding: "16px",
                     boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
                   }}
                 >
-                  <p style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 10, fontFamily: "'DM Sans', sans-serif" }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", marginBottom: 10, fontFamily: "'DM Sans', sans-serif" }}>
                     Add ingredients
                   </p>
                   <div className="flex gap-2">
@@ -382,11 +382,11 @@ export default function LogFood() {
                         flex: 1,
                         padding: "10px 14px",
                         borderRadius: 12,
-                        border: "1.5px solid oklch(0.88 0.020 72)",
-                        background: "oklch(0.97 0.015 75)",
+                        border: "1.5px solid var(--line)",
+                        background: "var(--app-bg)",
                         fontSize: 13,
                         fontFamily: "'DM Sans', sans-serif",
-                        color: "oklch(0.25 0.025 50)",
+                        color: "var(--ink)",
                         outline: "none",
                         opacity: addonLoading ? 0.6 : 1,
                       }}
@@ -425,10 +425,10 @@ export default function LogFood() {
                             background: "oklch(0.72 0.08 148 / 0.10)",
                           }}
                         >
-                          <span style={{ fontSize: 12, color: "oklch(0.40 0.06 148)", fontFamily: "'DM Sans', sans-serif" }}>
+                          <span style={{ fontSize: 12, color: "oklch(0.84 0.08 148)", fontFamily: "'DM Sans', sans-serif" }}>
                             + {a.name}
                           </span>
-                          <span style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
+                          <span style={{ fontSize: 11, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>
                             {a.calories} kcal · {a.protein}g P
                           </span>
                         </div>
@@ -469,17 +469,17 @@ export default function LogFood() {
           <div
             className="flex flex-col items-center gap-4 py-10 animate-fade-up"
             style={{
-              background: "oklch(0.99 0.010 78)",
+              background: "var(--card-bg)",
               borderRadius: 22,
               boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
             }}
           >
             <span style={{ fontSize: 56 }}>🌿</span>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 20, fontWeight: 700, color: "var(--ink)" }}>
                 Great job logging {mealType.toLowerCase()}!
               </p>
-              <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 6, fontFamily: "'DM Sans', sans-serif" }}>
+              <p style={{ fontSize: 13, color: "var(--txt-muted)", marginTop: 6, fontFamily: "'DM Sans', sans-serif" }}>
                 Your dashboard has been updated.
               </p>
             </div>
@@ -489,7 +489,7 @@ export default function LogFood() {
                 padding: "12px 24px",
                 borderRadius: 14,
                 background: "color-mix(in oklch, var(--accent) 12%, transparent)",
-                color: "oklch(0.50 0.10 38)",
+                color: "oklch(0.84 0.12 38)",
                 fontWeight: 600,
                 fontSize: 14,
                 fontFamily: "'DM Sans', sans-serif",

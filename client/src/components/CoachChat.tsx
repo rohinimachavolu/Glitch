@@ -10,6 +10,7 @@ import { nanoid } from "nanoid";
 import { Camera, CameraOff, Mic, Send, Trash2, Undo2, Volume2, VolumeX, X } from "lucide-react";
 import { toast } from "sonner";
 import MoodOrb from "./MoodOrb";
+import TalkingAvatar from "./TalkingAvatar";
 import { useApp, ChatMessage, Meal, getCycleDay, getCyclePhase, tracksOvulation } from "@/contexts/AppContext";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 import { useFaceEmotion } from "@/hooks/useFaceEmotion";
@@ -24,8 +25,8 @@ import { hormoneSummary } from "@/lib/hormones";
 import { bpCategory, BP_LABEL } from "@/lib/menopauseSignals";
 import NudgeStrip from "./NudgeStrip";
 
-const INK = "oklch(0.25 0.025 50)";
-const MUTED = "oklch(0.55 0.020 60)";
+const INK = "#F4F5F7";
+const MUTED = "#8B909A";
 const ACCENT = "var(--accent)";
 const font = "'DM Sans', sans-serif";
 
@@ -47,7 +48,7 @@ export function CoachFab({ onOpen }: { onOpen: () => void }) {
   return (
     <motion.button onClick={onOpen} aria-label="Talk to Glitchy, your coach" whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }}
       initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 18 }}
-      style={{ position: "fixed", bottom: 92, right: "max(16px, calc(50% - 215px + 16px))", zIndex: 60, width: 64, height: 64, borderRadius: "50%", border: "none", padding: 0, background: "oklch(0.99 0.010 78)", boxShadow: "0 8px 28px oklch(0.25 0.025 50 / 0.25)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+      style={{ position: "fixed", bottom: 92, right: "max(16px, calc(50% - 215px + 16px))", zIndex: 60, width: 64, height: 64, borderRadius: "50%", border: "none", padding: 0, background: "var(--card-bg)", boxShadow: "0 8px 28px oklch(0.25 0.025 50 / 0.25)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
       <MoodOrb state={{ valence: v, arousal: 0.35 }} size={64} />
     </motion.button>
   );
@@ -61,7 +62,12 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
   const nudges = useNudges();
 
   const [cameraOn, setCameraOn] = useState(false);
-  const [speakOn, setSpeakOn] = useState(false);
+  // Glitchy talks back by default; hands-free mode re-opens the mic after each spoken reply
+  const [speakOn, setSpeakOn] = useState(true);
+  const [handsFree, setHandsFree] = useState(false);
+  const [wordTick, setWordTick] = useState(0);
+  const handsFreeRef = useRef(false);
+  handsFreeRef.current = handsFree && open;
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -83,10 +89,10 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
     if (open && initialPrompt) { send(initialPrompt); onPromptUsed?.(); }
   }, [open, initialPrompt]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (open && autoListen && voice.supported && !voice.listening) { setSpeakOn(true); voice.start(); }
+    if (open && autoListen && voice.supported && !voice.listening) { setSpeakOn(true); setHandsFree(true); voice.start(); }
   }, [open, autoListen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [chatMessages.length, thinking, voice.interim]);
-  useEffect(() => { if (!open) { setCameraOn(false); voice.stop(); speechSynthesis?.cancel(); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!open) { setCameraOn(false); setHandsFree(false); voice.stop(); speechSynthesis?.cancel(); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function speak(text: string) {
     if (!speakOn || typeof speechSynthesis === "undefined") return;
@@ -96,7 +102,12 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
     u.voice = voices.find((v) => /Samantha|Google US English|Jenny|Aria/i.test(v.name)) ?? voices.find((v) => v.lang.startsWith("en")) ?? null;
     u.rate = fused?.label === "tense" || fused?.label === "low" ? 0.95 : 1.05;
     u.onstart = () => setSpeaking(true);
-    u.onend = () => setSpeaking(false);
+    u.onboundary = () => setWordTick((x) => x + 1);
+    u.onend = () => {
+      setSpeaking(false);
+      // Keep the conversation going without touching the screen
+      if (handsFreeRef.current && voice.supported) setTimeout(() => { if (handsFreeRef.current) voice.start(); }, 450);
+    };
     speechSynthesis.speak(u);
   }
 
@@ -130,6 +141,7 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
     const t = text.trim();
     if (!t || thinking) return;
     setDraft("");
+    if (via === "text") setHandsFree(false);
     const moodNow = fuseMood(face.read, arousal, textRead, selfRead);
     const userMsg: ChatMessage = { id: nanoid(), role: "user", text: t, at: new Date().toISOString(), via, mood: moodNow?.label };
     addChatMessage(userMsg);
@@ -201,7 +213,7 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
         <motion.div key="coach" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 260, damping: 30 }}
           role="dialog" aria-label="Glitchy coach"
           style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex", justifyContent: "center", background: "oklch(0.20 0.02 50 / 0.35)" }}>
-          <div style={{ width: "100%", maxWidth: 430, height: "100dvh", display: "flex", flexDirection: "column", background: `linear-gradient(180deg, hsl(${hue}, 62%, 89%) 0%, oklch(0.98 0.012 78) 38%)`, transition: "background 1.2s" }}>
+          <div style={{ width: "100%", maxWidth: 430, height: "100dvh", display: "flex", flexDirection: "column", background: `linear-gradient(180deg, hsl(${hue}, 45%, 19%) 0%, var(--app-bg) 42%)`, transition: "background 1.2s" }}>
             {/* Header */}
             <div className="flex items-center justify-between" style={{ padding: "14px 14px 0" }}>
               <div className="flex gap-2">
@@ -228,11 +240,16 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
                   </span>
                 </div>
               )}
-              <MoodOrb state={{ valence: fused?.valence ?? 0.1, arousal: fused?.arousal ?? 0.35, level: voice.level, mode: orbMode }} size={150} />
+              <div style={{ position: "relative", width: 190, height: 178, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.85 }}>
+                  <MoodOrb state={{ valence: fused?.valence ?? 0.1, arousal: fused?.arousal ?? 0.35, level: voice.level, mode: orbMode }} size={190} />
+                </div>
+                <TalkingAvatar mode={orbMode} wordTick={wordTick} micLevel={voice.level} userMood={fused?.label} size={138} />
+              </div>
               <AnimatePresence mode="wait">
                 <motion.button key={fused?.label ?? "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   onClick={() => setPickMood((v) => !v)} aria-expanded={pickMood} title="Tap to correct how I'm reading you"
-                  style={{ fontSize: 12, fontWeight: 700, color: INK, fontFamily: font, marginTop: -4, padding: "4px 10px", borderRadius: 999, background: "oklch(1 0 0 / 0.6)", border: "none" }}>
+                  style={{ fontSize: 12, fontWeight: 700, color: INK, fontFamily: font, marginTop: -4, padding: "4px 10px", borderRadius: 999, background: "var(--surface-2)", border: "none" }}>
                   {voice.listening ? "🎙️ Listening…" : thinking ? "💭 Thinking…" : fused ? `${LABEL_EMOJI[fused.label]} ${fused.sources[0] === "self" ? "You said" : "I'm reading"}: ${fused.label}${fused.sources[0] === "self" ? "" : ` · ${fused.sources.join(" + ")}`} ✎` : "Hi, I'm Glitchy 👋 How are you feeling? ✎"}
                 </motion.button>
               </AnimatePresence>
@@ -243,7 +260,7 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
                     <span style={{ width: "100%", textAlign: "center", fontSize: 11, color: MUTED, fontFamily: font }}>Not quite? I'm actually feeling…</span>
                     {(Object.keys(LABEL_EMOJI) as MoodLabel[]).map((l) => (
                       <button key={l} onClick={() => { setSelfMood({ label: l, until: Date.now() + 10 * 60_000 }); setPickMood(false); }}
-                        style={{ padding: "5px 10px", borderRadius: 999, border: "1.5px solid oklch(0.88 0.020 72)", background: "white", fontSize: 12, fontFamily: font, color: INK }}>
+                        style={{ padding: "5px 10px", borderRadius: 999, border: "1.5px solid var(--line)", background: "var(--card-bg)", fontSize: 12, fontFamily: font, color: INK }}>
                         {LABEL_EMOJI[l]} {l}
                       </button>
                     ))}
@@ -257,7 +274,7 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
             <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "10px 14px", scrollbarWidth: "none" }}>
               {chatMessages.length === 0 && (
                 <div style={{ textAlign: "center", padding: "10px 8px 14px" }}>
-                  <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: INK }}>What's on your mind{profile ? `, ${profile.name.split(" ")[0]}` : ""}?</p>
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 700, color: INK }}>What's on your mind{profile ? `, ${profile.name.split(" ")[0]}` : ""}?</p>
                   <p style={{ fontSize: 12.5, color: MUTED, fontFamily: font, marginTop: 4 }}>Tell me what you ate and I'll log it. Vent, ask, plan. Turn on the camera and I'll adapt to how you're feeling.</p>
                 </div>
               )}
@@ -280,7 +297,7 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
               <div className="flex gap-1.5 overflow-x-auto" style={{ padding: "0 14px 8px", scrollbarWidth: "none" }}>
                 {SUGGESTIONS.map((s) => (
                   <motion.button key={s} whileTap={{ scale: 0.95 }} onClick={() => send(s)}
-                    style={{ flexShrink: 0, padding: "8px 12px", borderRadius: 999, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.99 0.010 78)", color: INK, fontSize: 12.5, fontFamily: font, whiteSpace: "nowrap" }}>
+                    style={{ flexShrink: 0, padding: "8px 12px", borderRadius: 999, border: "1.5px solid var(--line)", background: "var(--card-bg)", color: INK, fontSize: 12.5, fontFamily: font, whiteSpace: "nowrap" }}>
                     {s}
                   </motion.button>
                 ))}
@@ -288,26 +305,29 @@ export default function CoachChat({ open, onClose, initialPrompt, onPromptUsed, 
             )}
 
             {/* Composer */}
-            <div className="flex items-end gap-2" style={{ padding: "8px 12px calc(12px + env(safe-area-inset-bottom))", borderTop: "1px solid oklch(0.90 0.015 72)", background: "oklch(0.99 0.010 78)" }}>
+            <div className="flex items-end gap-2" style={{ padding: "8px 12px calc(12px + env(safe-area-inset-bottom))", borderTop: "1px solid var(--line)", background: "var(--card-bg)" }}>
               <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={1} placeholder={voice.listening ? "Listening…" : "Message Glitchy…"}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(draft); } }}
                 aria-label="Message Glitchy"
-                style={{ flex: 1, resize: "none", maxHeight: 110, padding: "11px 14px", borderRadius: 20, border: "1.5px solid oklch(0.88 0.020 72)", background: "white", fontSize: 14.5, fontFamily: font, color: INK, outline: "none" }} />
+                style={{ flex: 1, resize: "none", maxHeight: 110, padding: "11px 14px", borderRadius: 20, border: "1.5px solid var(--line)", background: "var(--card-bg)", fontSize: 14.5, fontFamily: font, color: INK, outline: "none" }} />
               {draft.trim() ? (
                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => send(draft)} aria-label="Send" disabled={thinking}
-                  style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: ACCENT, color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: ACCENT, color: "var(--on-accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Send size={18} />
                 </motion.button>
               ) : (
                 <motion.button whileTap={{ scale: 0.9 }} aria-label={voice.listening ? "Stop listening" : "Talk to Glitchy"}
-                  onClick={() => (voice.supported ? (voice.listening ? voice.stop() : voice.start()) : toast.info("Voice input needs Chrome, Edge or Safari."))}
+                  onClick={() => {
+                    if (!voice.supported) { toast.info("Voice input needs Chrome, Edge or Safari."); return; }
+                    if (voice.listening) { setHandsFree(false); voice.stop(); } else { setHandsFree(true); speechSynthesis?.cancel(); voice.start(); }
+                  }}
                   animate={{ boxShadow: voice.listening ? `0 0 0 ${6 + voice.level * 14}px color-mix(in oklch, var(--accent) 25%, transparent)` : "0 0 0 0px transparent" }}
-                  style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: voice.listening ? "oklch(0.55 0.15 30)" : ACCENT, color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: voice.listening ? "oklch(0.55 0.15 30)" : ACCENT, color: "var(--on-accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Mic size={19} />
                 </motion.button>
               )}
             </div>
-            <p style={{ fontSize: 10, color: MUTED, fontFamily: font, textAlign: "center", padding: "0 12px 8px", background: "oklch(0.99 0.010 78)" }}>
+            <p style={{ fontSize: 10, color: MUTED, fontFamily: font, textAlign: "center", padding: "0 12px 8px", background: "var(--card-bg)" }}>
               Camera & voice are analysed on your phone; only text and a mood label are sent to the AI. Not medical advice.
             </p>
           </div>
@@ -322,12 +342,12 @@ function Bubble({ m, onUndo }: { m: ChatMessage; onUndo: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.2 }}
       style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "84%" }}>
-      <div style={{ padding: "9px 13px", borderRadius: mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: mine ? ACCENT : "white", color: mine ? "white" : INK, fontSize: 14, lineHeight: 1.45, fontFamily: font, boxShadow: mine ? "none" : "0 2px 8px oklch(0.25 0.025 50 / 0.06)" }}>
+      <div style={{ padding: "9px 13px", borderRadius: mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: mine ? ACCENT: "var(--card-bg)", color: mine ? "var(--on-accent)" : INK, fontSize: 14, lineHeight: 1.45, fontFamily: font, boxShadow: mine ? "none" : "0 2px 8px oklch(0.25 0.025 50 / 0.06)" }}>
         {m.text}
       </div>
       {mine && m.via === "voice" && <p style={{ fontSize: 10, color: MUTED, fontFamily: font, textAlign: "right", marginTop: 2 }}>🎙️ voice{m.mood ? ` · ${LABEL_EMOJI[m.mood]} ${m.mood}` : ""}</p>}
       {m.loggedMeals?.map((lm) => (
-        <div key={lm.id} className="flex items-center gap-2" style={{ marginTop: 6, padding: "9px 11px", borderRadius: 14, background: m.undone ? "oklch(0.93 0.01 70)" : "oklch(0.72 0.08 148 / 0.14)", border: "1px solid oklch(0.72 0.08 148 / 0.3)", opacity: m.undone ? 0.6 : 1 }}>
+        <div key={lm.id} className="flex items-center gap-2" style={{ marginTop: 6, padding: "9px 11px", borderRadius: 14, background: m.undone ? "var(--surface-2)" : "oklch(0.72 0.08 148 / 0.14)", border: "1px solid oklch(0.72 0.08 148 / 0.3)", opacity: m.undone ? 0.6 : 1 }}>
           <span style={{ fontSize: 18 }}>🍽️</span>
           <div className="flex-1">
             <p style={{ fontSize: 12.5, fontWeight: 700, color: INK, fontFamily: font, textDecoration: m.undone ? "line-through" : "none" }}>{lm.name}</p>
@@ -342,7 +362,7 @@ function Bubble({ m, onUndo }: { m: ChatMessage; onUndo: () => void }) {
       )}
       {m.removedMeals?.map((n) => <p key={n} style={{ fontSize: 11, color: MUTED, fontFamily: font, marginTop: 3 }}>🗑️ Removed “{n}”</p>)}
       {m.chips?.map((c) => (
-        <div key={c} style={{ marginTop: 6, padding: "8px 11px", borderRadius: 12, background: "color-mix(in oklch, var(--accent) 10%, white)", border: "1px solid color-mix(in oklch, var(--accent) 25%, transparent)", fontSize: 12.5, fontWeight: 700, color: INK, fontFamily: font }}>{c}</div>
+        <div key={c} style={{ marginTop: 6, padding: "8px 11px", borderRadius: 12, background: "color-mix(in oklch, var(--accent) 10%, var(--card-bg))", border: "1px solid color-mix(in oklch, var(--accent) 25%, transparent)", fontSize: 12.5, fontWeight: 700, color: INK, fontFamily: font }}>{c}</div>
       ))}
     </motion.div>
   );
@@ -350,7 +370,7 @@ function Bubble({ m, onUndo }: { m: ChatMessage; onUndo: () => void }) {
 
 function TypingDots() {
   return (
-    <div className="flex gap-1" style={{ alignSelf: "flex-start", padding: "12px 14px", borderRadius: "18px 18px 18px 4px", background: "white" }}>
+    <div className="flex gap-1" style={{ alignSelf: "flex-start", padding: "12px 14px", borderRadius: "18px 18px 18px 4px", background: "var(--card-bg)" }}>
       {[0, 1, 2].map((i) => (
         <motion.span key={i} animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15 }}
           style={{ width: 7, height: 7, borderRadius: "50%", background: MUTED, display: "block" }} />
@@ -362,7 +382,7 @@ function TypingDots() {
 function IconToggle({ on, onClick, label, children }: { on: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
   return (
     <motion.button whileTap={{ scale: 0.9 }} onClick={onClick} aria-label={label} title={label} aria-pressed={on}
-      style={{ width: 38, height: 38, borderRadius: 12, border: "none", background: on ? INK : "oklch(1 0 0 / 0.7)", color: on ? "white" : INK, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}>
+      style={{ width: 38, height: 38, borderRadius: 12, border: "none", background: on ? "var(--accent)" : "var(--surface-2)", color: on ? "var(--on-accent)" : INK, display: "flex", alignItems: "center", justifyContent: "center" }}>
       {children}
     </motion.button>
   );

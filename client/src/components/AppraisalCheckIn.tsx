@@ -16,11 +16,11 @@ import {
 import { phraseCoaching } from "@/lib/aiService";
 import { celebrate } from "./Fun";
 
-const INK = "oklch(0.25 0.025 50)";
-const MUTED = "oklch(0.55 0.020 60)";
+const INK = "#F4F5F7";
+const MUTED = "#8B909A";
 const ACCENT = "var(--accent)";
 const SAGE = "oklch(0.62 0.10 148)";
-const CARD = "oklch(0.99 0.010 78)";
+const CARD = "#17191F";
 const font = "'DM Sans', sans-serif";
 
 const MOODS = ["😞", "😕", "😐", "🙂", "😄"];
@@ -123,7 +123,7 @@ export default function AppraisalCheckIn() {
           background: "linear-gradient(120deg, color-mix(in oklch, var(--accent) 14%, transparent), oklch(0.72 0.08 148 / 0.14))", boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.05)" }}>
         <span style={{ fontSize: 28 }}>{last ? MOODS[last.input.mood - 1] : "🫶"}</span>
         <div className="flex-1">
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: INK }}>How are you, really?</p>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 700, color: INK }}>How are you, really?</p>
           <p style={{ fontSize: 12, color: MUTED, fontFamily: font }}>
             {last ? `Last check-in: ${last.stateLabel.toLowerCase()} · tap to check in again` : "20-second check-in on mood, cravings and stress, matched with your body data"}
           </p>
@@ -139,7 +139,7 @@ export default function AppraisalCheckIn() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex gap-1">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} style={{ width: i === step ? 22 : 8, height: 6, borderRadius: 999, background: i <= step ? ACCENT : "oklch(0.88 0.020 72)", transition: "all 0.25s" }} />
+            <div key={i} style={{ width: i === step ? 22 : 8, height: 6, borderRadius: 999, background: i <= step ? ACCENT: "var(--surface-2)", transition: "all 0.25s" }} />
           ))}
         </div>
         <button onClick={close} aria-label="Close check-in" style={{ border: "none", background: "transparent", color: MUTED, padding: 4 }}><X size={18} /></button>
@@ -177,7 +177,7 @@ export default function AppraisalCheckIn() {
               <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {APPRAISALS.map(([id, emoji, label]) => (
                   <motion.button key={id} whileTap={{ scale: 0.96 }} onClick={() => set("appraisal", id)}
-                    style={{ padding: "12px 10px", borderRadius: 14, textAlign: "left", border: input.appraisal === id ? `2px solid ${ACCENT}` : "1.5px solid oklch(0.88 0.020 72)", background: input.appraisal === id ? "color-mix(in oklch, var(--accent) 8%, transparent)" : CARD }}>
+                    style={{ padding: "12px 10px", borderRadius: 14, textAlign: "left", border: input.appraisal === id ? `2px solid ${ACCENT}` : "1.5px solid var(--line)", background: input.appraisal === id ? "color-mix(in oklch, var(--accent) 8%, transparent)" : CARD }}>
                     <span style={{ fontSize: 20 }}>{emoji}</span>
                     <p style={{ fontSize: 12.5, fontWeight: 600, color: INK, fontFamily: font, marginTop: 2 }}>{label}</p>
                   </motion.button>
@@ -188,7 +188,7 @@ export default function AppraisalCheckIn() {
               <Q top>What's going on? <span style={{ color: MUTED, fontWeight: 400 }}>(optional)</span></Q>
               <Chips items={TRIGGERS} isOn={(id) => input.triggers.includes(id)} onTap={toggleTrigger} />
               <textarea value={input.note} onChange={(e) => set("note", e.target.value)} placeholder="Anything else? (stays on your device)" rows={2}
-                style={{ width: "100%", marginTop: 10, padding: "10px 12px", borderRadius: 12, border: "1.5px solid oklch(0.88 0.020 72)", background: CARD, fontSize: 13, fontFamily: font, color: INK, resize: "none", outline: "none" }} />
+                style={{ width: "100%", marginTop: 10, padding: "10px 12px", borderRadius: 12, border: "1.5px solid var(--line)", background: CARD, fontSize: 13, fontFamily: font, color: INK, resize: "none", outline: "none" }} />
             </>
           )}
 
@@ -203,15 +203,15 @@ export default function AppraisalCheckIn() {
       {step < 3 ? (
         <div className="flex gap-2 mt-4">
           {step > 0 && (
-            <button onClick={() => setStep(step - 1)} style={{ padding: "12px 16px", borderRadius: 14, border: "1.5px solid oklch(0.88 0.020 72)", background: CARD, color: INK, fontWeight: 600, fontSize: 14, fontFamily: font }}>Back</button>
+            <button onClick={() => setStep(step - 1)} style={{ padding: "12px 16px", borderRadius: 14, border: "1.5px solid var(--line)", background: CARD, color: INK, fontWeight: 600, fontSize: 14, fontFamily: font }}>Back</button>
           )}
           <motion.button whileTap={{ scale: 0.97 }} onClick={() => (step === 2 ? finish() : setStep(step + 1))}
-            style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: ACCENT, color: "white", fontWeight: 700, fontSize: 14, fontFamily: font, boxShadow: "0 6px 18px color-mix(in oklch, var(--accent) 30%, transparent)" }}>
+            style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: ACCENT, color: "var(--on-accent)", fontWeight: 700, fontSize: 14, fontFamily: font, boxShadow: "0 6px 18px color-mix(in oklch, var(--accent) 30%, transparent)" }}>
             {step === 2 ? "Get my suggestion" : "Next"}
           </motion.button>
         </div>
       ) : (
-        <button onClick={close} style={{ width: "100%", marginTop: 12, padding: "11px", borderRadius: 14, border: "1.5px solid oklch(0.88 0.020 72)", background: CARD, color: INK, fontWeight: 600, fontSize: 13.5, fontFamily: font }}>Done</button>
+        <button onClick={close} style={{ width: "100%", marginTop: 12, padding: "11px", borderRadius: 14, border: "1.5px solid var(--line)", background: CARD, color: INK, fontWeight: 600, fontSize: 13.5, fontFamily: font }}>Done</button>
       )}
     </motion.div>
   );
@@ -226,16 +226,16 @@ function ResultView({ result, active, aiLine, aiLoading, rated, onSwap, onRate, 
     <div className="flex flex-col gap-3">
       {result.safety && (
         <div role="alert" style={{ padding: "12px 14px", borderRadius: 14, background: "oklch(0.62 0.15 30 / 0.10)", border: "1.5px solid oklch(0.62 0.15 30 / 0.4)" }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.45 0.15 30)", fontFamily: font, lineHeight: 1.5 }}>{result.safety.message}</p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.84 0.17 30)", fontFamily: font, lineHeight: 1.5 }}>{result.safety.message}</p>
           <a href="tel:988" style={{ display: "inline-block", marginTop: 8, padding: "8px 14px", borderRadius: 10, background: "oklch(0.55 0.15 30)", color: "white", fontWeight: 700, fontSize: 13, fontFamily: font, textDecoration: "none" }}>Call or text 988</a>
         </div>
       )}
 
       <div>
         <p style={{ fontSize: 11, fontWeight: 700, color: MUTED, fontFamily: font, letterSpacing: 0.4 }}>WHAT'S HAPPENING</p>
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700, color: INK, marginTop: 2 }}>{result.stateLabel}</p>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 19, fontWeight: 700, color: INK, marginTop: 2 }}>{result.stateLabel}</p>
         {result.mismatch && (
-          <span style={{ display: "inline-block", marginTop: 6, fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "oklch(0.72 0.08 148 / 0.15)", color: "oklch(0.42 0.08 148)", fontFamily: font }}>
+          <span style={{ display: "inline-block", marginTop: 6, fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: "oklch(0.72 0.08 148 / 0.15)", color: "oklch(0.84 0.1 148)", fontFamily: font }}>
             {result.mismatch === "mind_stressed_body_ok" ? "🧠 MIND STRESSED · 💚 BODY RECOVERED" : "🧠 MIND GOOD · 🫀 BODY LOADED"}
           </span>
         )}
@@ -248,7 +248,7 @@ function ResultView({ result, active, aiLine, aiLoading, rated, onSwap, onRate, 
           <Sparkles size={15} style={{ color: SAGE, flexShrink: 0, marginTop: 2 }} />
           {aiLoading
             ? <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1.2 }} style={{ height: 12, width: "80%", borderRadius: 6, background: "oklch(0.72 0.08 148 / 0.3)", marginTop: 3 }} />
-            : <p style={{ fontSize: 13, color: "oklch(0.35 0.06 148)", fontFamily: font, lineHeight: 1.45, fontStyle: "italic" }}>{aiLine}</p>}
+            : <p style={{ fontSize: 13, color: "oklch(0.84 0.08 148)", fontFamily: font, lineHeight: 1.45, fontStyle: "italic" }}>{aiLine}</p>}
         </div>
       )}
 
@@ -267,11 +267,11 @@ function ResultView({ result, active, aiLine, aiLoading, rated, onSwap, onRate, 
         </motion.div>
       </AnimatePresence>
 
-      <button onClick={onSwap} style={{ padding: "10px 12px", borderRadius: 12, border: "1.5px dashed oklch(0.80 0.03 60)", background: "transparent", color: INK, fontSize: 12.5, fontWeight: 600, fontFamily: font, textAlign: "left" }}>
+      <button onClick={onSwap} style={{ padding: "10px 12px", borderRadius: 12, border: "1.5px dashed var(--line)", background: "transparent", color: INK, fontSize: 12.5, fontWeight: 600, fontFamily: font, textAlign: "left" }}>
         Not feeling it? Try instead: <b>{other.title}</b>
       </button>
 
-      <div className="flex items-center justify-between" style={{ padding: "10px 12px", borderRadius: 12, background: "oklch(0.95 0.015 75)" }}>
+      <div className="flex items-center justify-between" style={{ padding: "10px 12px", borderRadius: 12, background: "var(--surface-2)" }}>
         <p style={{ fontSize: 12.5, fontWeight: 600, color: INK, fontFamily: font }}>{rated == null ? "Did this help?" : rated ? "Thanks! I'll suggest this more." : "Got it, I'll try something else next time."}</p>
         {rated == null && (
           <div className="flex gap-2">
@@ -298,7 +298,7 @@ function Timer({ minutes }: { minutes: number }) {
   const mm = left != null ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : `${minutes}:00`;
   return (
     <motion.button whileTap={{ scale: 0.96 }} onClick={left == null ? start : undefined}
-      style={{ marginTop: 10, width: "100%", padding: "10px", borderRadius: 12, border: "none", background: left === 0 ? SAGE : ACCENT, color: "white", fontWeight: 700, fontSize: 14, fontFamily: font, fontVariantNumeric: "tabular-nums" }}>
+      style={{ marginTop: 10, width: "100%", padding: "10px", borderRadius: 12, border: "none", background: left === 0 ? SAGE : ACCENT, color: "var(--on-accent)", fontWeight: 700, fontSize: 14, fontFamily: font, fontVariantNumeric: "tabular-nums" }}>
       {left == null ? `▶ Start ${mm}` : left === 0 ? "✓ Done, how do you feel?" : `⏳ ${mm}`}
     </motion.button>
   );
@@ -314,7 +314,7 @@ function EmojiRow({ items, value, onChange }: { items: string[]; value: number; 
       {items.map((e, i) => (
         <motion.button key={i} whileTap={{ scale: 0.88 }} onClick={() => onChange(i + 1)} aria-pressed={value === i + 1}
           animate={{ scale: value === i + 1 ? 1.12 : 1 }}
-          style={{ flex: 1, padding: "10px 0", borderRadius: 14, fontSize: 24, border: value === i + 1 ? `2px solid ${ACCENT}` : "1.5px solid oklch(0.90 0.015 72)", background: value === i + 1 ? "color-mix(in oklch, var(--accent) 8%, transparent)" : CARD }}>
+          style={{ flex: 1, padding: "10px 0", borderRadius: 14, fontSize: 24, border: value === i + 1 ? `2px solid ${ACCENT}` : "1.5px solid var(--line)", background: value === i + 1 ? "color-mix(in oklch, var(--accent) 8%, transparent)" : CARD }}>
           {e}
         </motion.button>
       ))}
@@ -327,7 +327,7 @@ function Chips<T extends string>({ items, isOn, onTap }: { items: [T, string][];
     <div className="flex flex-wrap gap-1.5">
       {items.map(([id, label]) => (
         <motion.button key={id} whileTap={{ scale: 0.94 }} onClick={() => onTap(id)} aria-pressed={isOn(id)}
-          style={{ padding: "6px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, fontFamily: font, border: isOn(id) ? "none" : "1.5px solid oklch(0.88 0.020 72)", background: isOn(id) ? ACCENT : CARD, color: isOn(id) ? "white" : "oklch(0.40 0.025 50)" }}>
+          style={{ padding: "6px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, fontFamily: font, border: isOn(id) ? "none" : "1.5px solid var(--line)", background: isOn(id) ? ACCENT : CARD, color: isOn(id) ? "var(--on-accent)" : "var(--ink)" }}>
           {label}
         </motion.button>
       ))}
@@ -338,7 +338,7 @@ function Chips<T extends string>({ items, isOn, onTap }: { items: [T, string][];
 function FeedbackBtn({ onClick, label, children }: { onClick: () => void; label: string; children: React.ReactNode }) {
   return (
     <motion.button whileTap={{ scale: 0.9 }} onClick={onClick} aria-label={label}
-      style={{ width: 36, height: 36, borderRadius: 10, border: "1.5px solid oklch(0.88 0.020 72)", background: CARD, color: INK, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      style={{ width: 36, height: 36, borderRadius: 10, border: "1.5px solid var(--line)", background: CARD, color: INK, display: "flex", alignItems: "center", justifyContent: "center" }}>
       {children}
     </motion.button>
   );

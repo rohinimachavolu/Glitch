@@ -118,7 +118,7 @@ export default function Fitness() {
     <div className="space-y-6 pb-8">
       {/* Header */}
       <div className="px-4 pt-6">
-        <h1 className="text-3xl font-bold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-3xl font-bold text-foreground mb-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
           Your Fitness Plan
         </h1>
         <p className="text-sm text-muted-foreground">Build a personalized weekly workout routine</p>
@@ -126,19 +126,19 @@ export default function Fitness() {
 
       {/* Step Counter */}
       <div className="px-4">
-        <Card className="p-4 bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
+        <Card className="p-4 bg-[var(--card-bg)] border-[var(--line)]">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Footprints size={18} className="text-orange-600" />
-              <span className="text-sm font-semibold text-orange-700">Steps Today</span>
+              <Footprints size={18} className="text-[var(--accent)]" />
+              <span className="text-sm font-semibold text-[var(--ink)]">Steps Today</span>
               {isActive && <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-500 text-white animate-pulse">LIVE</span>}
             </div>
-            <span className="text-2xl font-bold text-orange-700">{steps.toLocaleString()}</span>
+            <span className="text-2xl font-bold text-[var(--ink)]">{steps.toLocaleString()}</span>
           </div>
-          <div className="h-2 bg-orange-200 rounded-full overflow-hidden mb-2">
-            <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all duration-800" style={{ width: `${stepPct}%` }} />
+          <div className="h-2 bg-[var(--surface-2)] rounded-full overflow-hidden mb-2">
+            <div className="h-full bg-[var(--accent)] rounded-full transition-all duration-800" style={{ width: `${stepPct}%` }} />
           </div>
-          <p className="text-xs text-orange-600 mb-3">Goal: {dynamicStepGoal.toLocaleString()} steps</p>
+          <p className="text-xs text-[var(--accent)] mb-3">Goal: {dynamicStepGoal.toLocaleString()} steps</p>
           <div className="flex gap-2">
             <Button size="sm" onClick={handleStartStepCounter} className="flex-1" style={{ background: isActive ? "oklch(0.55 0.08 25)" : "var(--accent)" }}>
               <Smartphone size={14} className="mr-1" />
@@ -152,19 +152,19 @@ export default function Fitness() {
       {/* Weekly Progress */}
       {weeklyWorkoutPlan && (
         <div className="px-4">
-          <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+          <Card className="p-6 bg-[var(--card-bg)] border-[var(--line)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Weekly Progress</p>
-                <p className="text-2xl font-bold text-purple-700 mt-1">{completedCount} / {totalCount} Workouts</p>
+                <p className="text-xs font-semibold text-[var(--accent)] uppercase tracking-wide">Weekly Progress</p>
+                <p className="text-2xl font-bold text-[var(--ink)] mt-1">{completedCount} / {totalCount} Workouts</p>
               </div>
               <div className="relative w-20 h-20">
                 <svg className="w-full h-full" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="oklch(0.88 0.020 72)" strokeWidth="8" />
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="#2A2D36" strokeWidth="8" />
                   <circle cx="50" cy="50" r="45" fill="none" stroke="oklch(0.68 0.09 25)" strokeWidth="8" strokeDasharray={`${(weeklyProgress / 100) * 283} 283`} strokeLinecap="round" style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%", transition: "stroke-dasharray 0.6s ease" }} />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-bold text-purple-700">{weeklyProgress}%</span>
+                  <span className="text-sm font-bold text-[var(--ink)]">{weeklyProgress}%</span>
                 </div>
               </div>
             </div>
@@ -177,7 +177,7 @@ export default function Fitness() {
         <label className="text-sm font-semibold text-foreground">How many days per week?</label>
         <div className="flex gap-2 flex-wrap">
           {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-            <button key={n} onClick={() => setDaysPerWeek(n)} className="px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ background: daysPerWeek === n ? "var(--accent)" : "oklch(0.92 0.004 286.32)", color: daysPerWeek === n ? "white" : "oklch(0.55 0.020 60)" }}>
+            <button key={n} onClick={() => setDaysPerWeek(n)} className="px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ background: daysPerWeek === n ? "var(--accent)" : "var(--surface-2)", color: daysPerWeek === n ? "var(--on-accent)" : "oklch(0.55 0.020 60)" }}>
               {n}
             </button>
           ))}
@@ -201,7 +201,7 @@ export default function Fitness() {
                 <button onClick={() => setExpandedDay(isExpanded ? null : dayIdx)} className="w-full p-4 flex items-center justify-between hover:bg-secondary transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "color-mix(in oklch, var(--accent) 10%, transparent)" }}>
-                      <span className="text-sm font-bold text-orange-700">{dayIdx}</span>
+                      <span className="text-sm font-bold text-[var(--ink)]">{dayIdx}</span>
                     </div>
                     <div className="text-left">
                       <p className="font-semibold text-foreground">{DAY_FULL[dayIdx]}</p>
@@ -239,7 +239,7 @@ export default function Fitness() {
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <button onClick={() => toggleExerciseCompletion(ex.id)} className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all" style={{ borderColor: ex.completed ? "var(--accent)" : "oklch(0.88 0.020 72)", background: ex.completed ? "var(--accent)" : "transparent" }}>
+                                  <button onClick={() => toggleExerciseCompletion(ex.id)} className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all" style={{ borderColor: ex.completed ? "var(--accent)" : "var(--line)", background: ex.completed ? "var(--accent)" : "transparent" }}>
                                     {ex.completed && <Check size={14} className="text-white" />}
                                   </button>
                                   <p className={`font-semibold ${ex.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{ex.name}</p>

@@ -7,8 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Lock } from "lucide-react";
 import { HORMONE_OPTIONS, type HormoneContext, type HormoneUse } from "@/lib/hormones";
 
-const INK = "oklch(0.25 0.025 50)";
-const MUTED = "oklch(0.55 0.020 60)";
+const INK = "#F4F5F7";
+const MUTED = "#8B909A";
 const font = "'DM Sans', sans-serif";
 
 type Choice = "share" | "none" | "prefer_not";
@@ -23,7 +23,7 @@ export default function HormoneConsent({ value, onChange }: { value: HormoneCont
   }
 
   return (
-    <div className="flex flex-col gap-2" style={{ padding: 12, borderRadius: 14, background: "oklch(0.97 0.012 75)", border: "1.5px solid oklch(0.88 0.020 72)" }}>
+    <div className="flex flex-col gap-2" style={{ padding: 12, borderRadius: 14, background: "var(--app-bg)", border: "1.5px solid var(--line)" }}>
       <div className="flex items-start gap-2">
         <Lock size={15} style={{ color: "var(--accent, var(--accent))", marginTop: 2, flexShrink: 0 }} />
         <div>
@@ -35,7 +35,7 @@ export default function HormoneConsent({ value, onChange }: { value: HormoneCont
         {([["share", "Yes, I'll share"], ["none", "None"], ["prefer_not", "Prefer not to say"]] as [Choice, string][]).map(([id, label]) => (
           <button key={id} aria-pressed={choice === id}
             onClick={() => { setChoice(id); onChange(id === "share" ? { consented: true, uses: value?.uses ?? [] } : id === "none" ? { consented: true, uses: [] } : { consented: false, preferNotToSay: true, uses: [] }); }}
-            style={{ flex: 1, padding: "8px 4px", borderRadius: 10, fontSize: 11.5, fontWeight: 700, fontFamily: font, border: choice === id ? "2px solid var(--accent, var(--accent))" : "1.5px solid oklch(0.88 0.020 72)", background: choice === id ? "color-mix(in oklch, var(--accent, var(--accent)) 10%, white)" : "white", color: INK }}>
+            style={{ flex: 1, padding: "8px 4px", borderRadius: 10, fontSize: 11.5, fontWeight: 700, fontFamily: font, border: choice === id ? "2px solid var(--accent, var(--accent))" : "1.5px solid var(--line)", background: choice === id ? "color-mix(in oklch, var(--accent, var(--accent)) 10%, white)" : "white", color: INK }}>
             {label}
           </button>
         ))}
@@ -51,7 +51,7 @@ export default function HormoneConsent({ value, onChange }: { value: HormoneCont
                     const on = !!value?.uses.includes(o.id);
                     return (
                       <motion.button key={o.id} whileTap={{ scale: 0.94 }} onClick={() => toggle(o.id)} aria-pressed={on}
-                        style={{ padding: "6px 11px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, fontFamily: font, border: on ? "none" : "1.5px solid oklch(0.88 0.020 72)", background: on ? "var(--accent, var(--accent))" : "white", color: on ? "white" : INK }}>
+                        style={{ padding: "6px 11px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, fontFamily: font, border: on ? "none" : "1.5px solid var(--line)", background: on ? "var(--accent, var(--accent))" : "white", color: on ? "white" : INK }}>
                         {o.label}
                       </motion.button>
                     );

@@ -10,9 +10,9 @@ import { Activity, Battery, Brain, HeartPulse, Watch } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 
-const INK = "oklch(0.25 0.025 50)";
-const MUTED = "oklch(0.55 0.020 60)";
-const CARD = "oklch(0.99 0.010 78)";
+const INK = "#F4F5F7";
+const MUTED = "#8B909A";
+const CARD = "#17191F";
 const GOOD = "oklch(0.66 0.11 148)";
 const OK = "oklch(0.75 0.12 75)";
 const BAD = "oklch(0.62 0.15 30)";
@@ -33,14 +33,14 @@ export default function BodyStatusCard() {
         style={{ background: `linear-gradient(135deg, ${INK} 0%, oklch(0.32 0.04 40) 100%)`, borderRadius: 22, padding: 18, color: "white" }}>
         <div className="flex items-center gap-2 mb-2">
           <Watch size={18} />
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700 }}>Connect your WHOOP</p>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 700 }}>Connect your WHOOP</p>
         </div>
         <p style={{ fontSize: 12.5, opacity: 0.8, fontFamily: font, lineHeight: 1.5, marginBottom: 14 }}>
           Unlock cycle-adjusted recovery, stress, energy, VO₂max and ovulation confirmation from your heart rate, HRV and skin temperature.
         </p>
         <div className="flex gap-2">
           <motion.button whileTap={{ scale: 0.96 }} onClick={() => toast.info("Live WHOOP sign-in needs the backend — coming next. Try demo data for now.")}
-            style={{ flex: 1, padding: "11px", borderRadius: 13, border: "none", background: "white", color: INK, fontWeight: 700, fontSize: 13, fontFamily: font }}>
+            style={{ flex: 1, padding: "11px", borderRadius: 13, border: "none", background: "var(--card-bg)", color: INK, fontWeight: 700, fontSize: 13, fontFamily: font }}>
             Connect WHOOP
           </motion.button>
           <motion.button whileTap={{ scale: 0.96 }} onClick={() => { connectWhoopDemo(); toast.success("Loaded 90 days of demo WHOOP data"); }}
@@ -59,7 +59,7 @@ export default function BodyStatusCard() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       style={{ background: CARD, borderRadius: 22, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" }}>
       <div className="flex items-center justify-between mb-3">
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)" }}>Body Status</h2>
+        <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "var(--ink)" }}>Body Status</h2>
         <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999, fontFamily: font, background: h.source === "demo" ? "oklch(0.75 0.12 75 / 0.18)" : "oklch(0.66 0.11 148 / 0.18)", color: h.source === "demo" ? "oklch(0.50 0.10 75)" : "oklch(0.45 0.10 148)" }}>
           {h.source === "demo" ? "DEMO DATA" : "WHOOP LIVE"}
         </span>
@@ -73,7 +73,7 @@ export default function BodyStatusCard() {
             <div className="flex items-center gap-2 flex-wrap">
               <p style={{ fontSize: 12, fontWeight: 700, color: MUTED, fontFamily: font, letterSpacing: 0.4 }}>RECOVERY</p>
               {rec.phase && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 12%, transparent)", color: "oklch(0.52 0.12 38)", fontFamily: font, textTransform: "capitalize" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 12%, transparent)", color: "oklch(0.84 0.14 38)", fontFamily: font, textTransform: "capitalize" }}>
                   {rec.phase} phase
                 </span>
               )}
@@ -90,13 +90,13 @@ export default function BodyStatusCard() {
 
       {/* Tiles */}
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-        <TileButton active={open === "stress"} onClick={() => setOpen(open === "stress" ? null : "stress")}
+        <TileButton active={open === "stress"} onClick={() => setOpen(open === "stress" ? null: "stress")}
           icon={<Brain size={15} />} label="Stress" value={h.stress ? `${h.stress.score}` : "—"}
           sub={h.stress?.level ?? "building"} color={h.stress ? tierColor(100 - h.stress.score, 60, 35) : MUTED} />
-        <TileButton active={open === "energy"} onClick={() => setOpen(open === "energy" ? null : "energy")}
+        <TileButton active={open === "energy"} onClick={() => setOpen(open === "energy" ? null: "energy")}
           icon={<Battery size={15} />} label="Energy" value={h.energy ? `${h.energy.score}%` : "—"}
           sub={h.energy?.label ?? "—"} color={h.energy ? tierColor(h.energy.score, 70, 40) : MUTED} />
-        <TileButton active={open === "vo2"} onClick={() => setOpen(open === "vo2" ? null : "vo2")}
+        <TileButton active={open === "vo2"} onClick={() => setOpen(open === "vo2" ? null: "vo2")}
           icon={<HeartPulse size={15} />} label="VO₂max" value={h.vo2 ? `${h.vo2.value}` : "—"}
           sub={h.vo2?.category ?? "—"} color={h.vo2 ? (["Excellent", "Superior"].includes(h.vo2.category) ? GOOD : h.vo2.category === "Good" ? OK : BAD) : MUTED} />
       </div>
@@ -105,7 +105,7 @@ export default function BodyStatusCard() {
         {open && (
           <motion.div key={open} initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }} style={{ overflow: "hidden" }}>
-            <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 14, background: "oklch(0.95 0.015 75)" }}>
+            <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 14, background: "var(--surface-2)" }}>
               {open === "stress" && h.stress && (
                 <>
                   <Detail title="What's driving it" />
@@ -142,7 +142,7 @@ function Ring({ value, color }: { value: number; color: string }) {
   return (
     <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="oklch(0.90 0.015 72)" strokeWidth={sw} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#2A2D36" strokeWidth={sw} />
         <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round"
           strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - value / 100) }}
           transition={{ duration: 1.1, ease: [0.23, 1, 0.32, 1] }} />
@@ -157,7 +157,7 @@ function Ring({ value, color }: { value: number; color: string }) {
 function TileButton({ active, onClick, icon, label, value, sub, color }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; value: string; sub: string; color: string }) {
   return (
     <motion.button whileTap={{ scale: 0.95 }} onClick={onClick} aria-expanded={active}
-      style={{ padding: "10px 8px", borderRadius: 14, border: active ? `2px solid ${color}` : "1.5px solid oklch(0.90 0.015 72)", background: active ? "oklch(0.97 0.012 75)" : CARD, textAlign: "left", transition: "border-color 0.15s" }}>
+      style={{ padding: "10px 8px", borderRadius: 14, border: active ? `2px solid ${color}` : "1.5px solid var(--line)", background: active ? "var(--surface-2)" : CARD, textAlign: "left", transition: "border-color 0.15s" }}>
       <div className="flex items-center gap-1" style={{ color, marginBottom: 4 }}>
         {icon}
         <span style={{ fontSize: 10.5, fontWeight: 700, fontFamily: font, color: MUTED }}>{label}</span>

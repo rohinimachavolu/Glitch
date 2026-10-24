@@ -7,10 +7,10 @@ import { useApp } from "@/contexts/AppContext";
 import { LIFE_STAGES } from "@/lib/lifeStage";
 import { useHealthInsights } from "@/hooks/useHealthInsights";
 
-const INK = "oklch(0.25 0.025 50)";
-const MUTED = "oklch(0.55 0.020 60)";
+const INK = "#F4F5F7";
+const MUTED = "#8B909A";
 const font = "'DM Sans', sans-serif";
-const card = { background: "oklch(0.99 0.010 78)", borderRadius: 20, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" };
+const card = { background: "var(--card-bg)", borderRadius: 20, padding: 16, boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)" };
 
 export default function LifeStagePanel() {
   const { profile } = useApp();
@@ -40,13 +40,13 @@ export default function LifeStagePanel() {
   return (
     <div className="flex flex-col gap-4 px-4 pt-3">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        style={{ ...card, background: "linear-gradient(150deg, color-mix(in oklch, var(--accent) 14%, transparent) 0%, oklch(0.99 0.010 78) 70%)" }}>
+        style={{ ...card, background: "linear-gradient(150deg, color-mix(in oklch, var(--accent) 14%, transparent) 0%, var(--card-bg) 70%)" }}>
         <div className="flex items-center gap-3">
           <span style={{ fontSize: 40 }}>{info.emoji}</span>
           <div>
-            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700, color: INK }}>{info.label}</p>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 19, fontWeight: 700, color: INK }}>{info.label}</p>
             {weeksPregnant != null && (
-              <p style={{ fontSize: 13, fontWeight: 700, color: "oklch(0.52 0.12 38)", fontFamily: font }}>About {weeksPregnant} weeks · trimester {weeksPregnant < 14 ? 1 : weeksPregnant < 28 ? 2 : 3}</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "oklch(0.84 0.14 38)", fontFamily: font }}>About {weeksPregnant} weeks · trimester {weeksPregnant < 14 ? 1 : weeksPregnant < 28 ? 2 : 3}</p>
             )}
           </div>
         </div>
@@ -66,7 +66,7 @@ export default function LifeStagePanel() {
           <p style={{ fontSize: 14, fontWeight: 700, color: INK, fontFamily: font, marginBottom: 8 }}>{emoji} {title}</p>
           <div className="flex flex-col gap-1.5">
             {items.map((t) => (
-              <div key={t} style={{ padding: "8px 11px", borderRadius: 10, background: "oklch(0.95 0.015 75)" }}>
+              <div key={t} style={{ padding: "8px 11px", borderRadius: 10, background: "var(--surface-2)" }}>
                 <p style={{ fontSize: 12.5, color: INK, fontFamily: font }}>{t}</p>
               </div>
             ))}

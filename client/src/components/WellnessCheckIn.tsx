@@ -36,7 +36,7 @@ function ScaleSelector({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
-        <span style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
           {label}
         </span>
         <span style={{ fontSize: 12, color, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
@@ -53,7 +53,7 @@ function ScaleSelector({
               height: 32,
               borderRadius: 8,
               border: "none",
-              background: v <= value ? color : "oklch(0.88 0.020 72)",
+              background: v <= value ? color: "var(--surface-2)",
               opacity: v <= value ? 1 : 0.4,
               transition: "all 0.15s",
               cursor: "pointer",
@@ -120,7 +120,7 @@ export default function WellnessCheckIn() {
   return (
     <div
       style={{
-        background: "oklch(0.99 0.010 78)",
+        background: "var(--card-bg)",
         borderRadius: 20,
         padding: "16px",
         boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
@@ -128,10 +128,10 @@ export default function WellnessCheckIn() {
     >
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
             🧠 Daily Wellness Check-In
           </p>
-          <p style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif", marginTop: 2 }}>
+          <p style={{ fontSize: 11, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif", marginTop: 2 }}>
             Tracks mood, energy, stress & cortisol patterns
           </p>
         </div>
@@ -141,8 +141,8 @@ export default function WellnessCheckIn() {
             style={{
               padding: "7px 14px",
               borderRadius: 10,
-              background: open ? "oklch(0.93 0.018 75)" : "var(--accent)",
-              color: open ? "oklch(0.35 0.025 50)" : "white",
+              background: open ? "var(--surface-2)" : "var(--accent)",
+              color: open ? "var(--ink)" : "white",
               fontSize: 12,
               fontWeight: 600,
               fontFamily: "'DM Sans', sans-serif",
@@ -167,9 +167,9 @@ export default function WellnessCheckIn() {
                 { label: "Stress", val: STRESS_LABELS[todayEntry.stress - 1] },
                 { label: "Sleep",  val: `${todayEntry.sleepHours}h` },
               ].map(({ label, val }) => (
-                <div key={label} style={{ padding: "6px 12px", borderRadius: 10, background: "oklch(0.93 0.018 75)" }}>
-                  <p style={{ fontSize: 10, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>{label}</p>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{val}</p>
+                <div key={label} style={{ padding: "6px 12px", borderRadius: 10, background: "var(--surface-2)" }}>
+                  <p style={{ fontSize: 10, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>{label}</p>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>{val}</p>
                 </div>
               ))}
             </div>
@@ -188,17 +188,17 @@ export default function WellnessCheckIn() {
                   Cortisol Risk: {risk.label}
                 </span>
               </div>
-              <p style={{ fontSize: 11, color: "oklch(0.45 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+              <p style={{ fontSize: 11, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
                 {risk.tip}
               </p>
             </div>
             {todayEntry.cravings.length > 0 && !todayEntry.cravings.includes("none") && (
               <div className="flex gap-2 flex-wrap">
-                <span style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>Cravings:</span>
+                <span style={{ fontSize: 11, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>Cravings:</span>
                 {todayEntry.cravings.map((c) => {
                   const opt = CRAVING_OPTIONS.find((o) => o.id === c);
                   return (
-                    <span key={c} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 10%, transparent)", color: "oklch(0.50 0.10 38)", fontFamily: "'DM Sans', sans-serif" }}>
+                    <span key={c} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "color-mix(in oklch, var(--accent) 10%, transparent)", color: "oklch(0.84 0.12 38)", fontFamily: "'DM Sans', sans-serif" }}>
                       {opt?.emoji} {opt?.label}
                     </span>
                   );
@@ -217,7 +217,7 @@ export default function WellnessCheckIn() {
           <ScaleSelector label="Stress" value={stress} onChange={setStress} labels={STRESS_LABELS} color="var(--accent)" />
 
           <div className="flex flex-col gap-1">
-            <label style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
               Sleep last night (hours)
             </label>
             <input
@@ -225,12 +225,12 @@ export default function WellnessCheckIn() {
               value={sleep}
               onChange={(e) => setSleep(e.target.value)}
               min="0" max="12" step="0.5"
-              style={{ padding: "9px 14px", borderRadius: 10, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.97 0.015 75)", fontSize: 14, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif", outline: "none", width: "100%" }}
+              style={{ padding: "9px 14px", borderRadius: 10, border: "1.5px solid var(--line)", background: "var(--app-bg)", fontSize: 14, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif", outline: "none", width: "100%" }}
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
               Cravings today?
             </label>
             <div className="flex gap-2 flex-wrap">
@@ -241,9 +241,9 @@ export default function WellnessCheckIn() {
                   style={{
                     padding: "6px 12px",
                     borderRadius: 999,
-                    border: cravings.includes(id) ? "none" : "1.5px solid oklch(0.88 0.020 72)",
-                    background: cravings.includes(id) ? "var(--accent)" : "oklch(0.99 0.010 78)",
-                    color: cravings.includes(id) ? "white" : "oklch(0.45 0.025 50)",
+                    border: cravings.includes(id) ? "none" : "1.5px solid var(--line)",
+                    background: cravings.includes(id) ? "var(--accent)" : "var(--card-bg)",
+                    color: cravings.includes(id) ? "white" : "var(--ink)",
                     fontSize: 12,
                     fontFamily: "'DM Sans', sans-serif",
                     transition: "all 0.15s",
@@ -256,7 +256,7 @@ export default function WellnessCheckIn() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label style={{ fontSize: 13, fontWeight: 600, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
               Any notes? (optional)
             </label>
             <textarea
@@ -264,7 +264,7 @@ export default function WellnessCheckIn() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="How are you feeling today?"
               rows={2}
-              style={{ padding: "9px 14px", borderRadius: 10, border: "1.5px solid oklch(0.88 0.020 72)", background: "oklch(0.97 0.015 75)", fontSize: 13, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif", outline: "none", resize: "none", width: "100%" }}
+              style={{ padding: "9px 14px", borderRadius: 10, border: "1.5px solid var(--line)", background: "var(--app-bg)", fontSize: 13, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif", outline: "none", resize: "none", width: "100%" }}
             />
           </div>
 
@@ -290,17 +290,17 @@ export default function WellnessCheckIn() {
       {/* Historical wellness log */}
       {wellnessLog.length > 1 && (
         <div className="mt-4">
-          <p style={{ fontSize: 12, fontWeight: 600, color: "oklch(0.45 0.025 50)", marginBottom: 8, fontFamily: "'DM Sans', sans-serif" }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", marginBottom: 8, fontFamily: "'DM Sans', sans-serif" }}>
             Recent check-ins
           </p>
           <div className="flex flex-col gap-2">
             {wellnessLog.slice(-5).reverse().map((entry, i) => {
               const risk = getCortisolRisk(entry);
               return (
-                <div key={i} className="flex items-center justify-between" style={{ padding: "8px 12px", borderRadius: 10, background: "oklch(0.93 0.018 75)" }}>
-                  <span style={{ fontSize: 12, color: "oklch(0.45 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>{entry.date}</span>
+                <div key={i} className="flex items-center justify-between" style={{ padding: "8px 12px", borderRadius: 10, background: "var(--surface-2)" }}>
+                  <span style={{ fontSize: 12, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>{entry.date}</span>
                   <div className="flex gap-2 items-center">
-                    <span style={{ fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "oklch(0.55 0.020 60)" }}>
+                    <span style={{ fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: "var(--txt-muted)" }}>
                       😊{entry.mood} ⚡{entry.energy} 😰{entry.stress}
                     </span>
                     <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: `${risk.color}22`, color: risk.color, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>

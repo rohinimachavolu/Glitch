@@ -36,10 +36,10 @@ export default function MicroBar({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex justify-between items-center">
-        <span style={{ fontSize: 12, fontWeight: 500, color: "oklch(0.35 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
           {label}
         </span>
-        <span style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
+        <span style={{ fontSize: 11, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>
           {value}{unit} / {target}{unit}
         </span>
       </div>
@@ -47,7 +47,7 @@ export default function MicroBar({
         style={{
           height: 7,
           borderRadius: 999,
-          background: "oklch(0.88 0.020 72)",
+          background: "var(--surface-2)",
           overflow: "hidden",
         }}
       >

@@ -84,7 +84,7 @@ export function Confetti() {
           ))}
           {burst.msg && (
             <motion.p initial={{ opacity: 0, y: 10, scale: 0.9 }} animate={{ opacity: 1, y: -60, scale: 1 }} exit={{ opacity: 0 }}
-              style={{ position: "absolute", transform: "translateX(-50%)", whiteSpace: "nowrap", padding: "8px 14px", borderRadius: 999, background: "white", color: "var(--accent-deep)", fontWeight: 800, fontSize: 14, fontFamily: font, boxShadow: "0 6px 20px rgba(0,0,0,0.12)" }}>
+              style={{ position: "absolute", transform: "translateX(-50%)", whiteSpace: "nowrap", padding: "8px 14px", borderRadius: 999, background: "var(--card-bg)", color: "var(--accent-deep)", fontWeight: 800, fontSize: 14, fontFamily: font, boxShadow: "0 6px 20px rgba(0,0,0,0.12)" }}>
               {burst.msg}
             </motion.p>
           )}

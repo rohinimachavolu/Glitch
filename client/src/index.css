@@ -6,7 +6,7 @@
 /* ============================================================
    NutriSense AI — Organic Wellness Journal Design System
    Palette: Terracotta + Sage Green + Creamy Warm White
-   Fonts: Playfair Display (headings) + DM Sans (body/UI)
+   Fonts: DM Sans (headings + UI), dark unified design system
    ============================================================ */
 
 @theme inline {
@@ -50,63 +50,63 @@
 
 :root {
   --radius: 1rem;
+  color-scheme: dark;
 
-  /* Adaptive theme (overwritten at runtime by lib/theme.ts) */
-  --accent: oklch(0.62 0.12 38);
-  --accent-deep: oklch(0.45 0.12 38);
-  --app-bg: oklch(0.97 0.015 75);
-  --app-outer: oklch(0.93 0.018 75);
+  /* ── Glitch design system (one look across every screen; WHOOP-inspired dark) ── */
+  --app-bg: #0D0E12;        /* page */
+  --app-outer: #07080A;     /* around the phone shell */
+  --card-bg: #17191F;       /* cards / tiles */
+  --surface-2: #22252D;     /* chips, inputs, inner panels */
+  --line: #2A2D36;          /* hairlines / borders */
+  --ink: #F4F5F7;           /* primary text */
+  --ink-2: #C9CCD3;         /* secondary text */
+  --txt-muted: #8B909A;     /* captions */
+  --muted: #22252D;         /* shadcn "muted" surface */
+  --good: oklch(0.80 0.19 150);
+  --warn: oklch(0.86 0.17 95);
+  --bad: oklch(0.68 0.21 25);
 
-  /* Warm cream background */
-  --background: oklch(0.97 0.015 75);
-  --foreground: oklch(0.25 0.025 50);
+  /* Adaptive accent (overwritten at runtime by lib/theme.ts from cycle phase / life stage / age) */
+  --accent: oklch(0.78 0.15 150);
+  --accent-deep: oklch(0.88 0.10 150);
+  --on-accent: #0D0E12;     /* text/icons on accent fills */
 
-  /* Card surfaces — slightly warmer than background */
-  --card: oklch(0.99 0.010 78);
-  --card-foreground: oklch(0.25 0.025 50);
+  /* shadcn/ui tokens mapped onto the same system */
+  --background: #0D0E12;
+  --foreground: #F4F5F7;
+  --card: #17191F;
+  --card-foreground: #F4F5F7;
+  --popover: #17191F;
+  --popover-foreground: #F4F5F7;
+  --primary: oklch(0.78 0.15 150);
+  --primary-foreground: #0D0E12;
+  --secondary: #22252D;
+  --secondary-foreground: #F4F5F7;
+  --muted-foreground: #8B909A;
+  --accent-foreground: #0D0E12;
+  --destructive: oklch(0.68 0.21 25);
+  --destructive-foreground: #ffffff;
+  --border: #2A2D36;
+  --input: #22252D;
+  --ring: oklch(0.78 0.15 150);
 
-  --popover: oklch(0.99 0.010 78);
-  --popover-foreground: oklch(0.25 0.025 50);
+  --chart-1: oklch(0.78 0.15 150);
+  --chart-2: oklch(0.77 0.17 55);
+  --chart-3: oklch(0.72 0.16 290);
+  --chart-4: oklch(0.68 0.21 25);
+  --chart-5: oklch(0.80 0.13 190);
 
-  /* Primary — terracotta */
-  --primary: oklch(0.62 0.12 38);
-  --primary-foreground: oklch(0.99 0.005 75);
-
-  /* Secondary — warm beige */
-  --secondary: oklch(0.92 0.025 72);
-  --secondary-foreground: oklch(0.35 0.025 50);
-
-  /* Muted */
-  --muted: oklch(0.93 0.018 75);
-  --muted-foreground: oklch(0.55 0.020 60);
-
-  /* Accent — sage green */
-  --accent: oklch(0.72 0.08 148);
-  --accent-foreground: oklch(0.99 0.005 75);
-
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-
-  --border: oklch(0.88 0.020 72);
-  --input: oklch(0.91 0.018 72);
-  --ring: oklch(0.62 0.12 38);
-
-  /* Charts */
-  --chart-1: oklch(0.62 0.12 38);   /* terracotta */
-  --chart-2: oklch(0.72 0.08 148);  /* sage */
-  --chart-3: oklch(0.78 0.10 75);   /* amber-beige */
-  --chart-4: oklch(0.68 0.09 25);   /* dusty rose */
-  --chart-5: oklch(0.55 0.08 200);  /* muted teal */
-
-  --sidebar: oklch(0.99 0.010 78);
-  --sidebar-foreground: oklch(0.25 0.025 50);
-  --sidebar-primary: oklch(0.62 0.12 38);
-  --sidebar-primary-foreground: oklch(0.99 0.005 75);
-  --sidebar-accent: oklch(0.93 0.018 75);
-  --sidebar-accent-foreground: oklch(0.25 0.025 50);
-  --sidebar-border: oklch(0.88 0.020 72);
-  --sidebar-ring: oklch(0.62 0.12 38);
+  --sidebar: #17191F;
+  --sidebar-foreground: #F4F5F7;
+  --sidebar-primary: oklch(0.78 0.15 150);
+  --sidebar-primary-foreground: #0D0E12;
+  --sidebar-accent: #22252D;
+  --sidebar-accent-foreground: #F4F5F7;
+  --sidebar-border: #2A2D36;
+  --sidebar-ring: oklch(0.78 0.15 150);
 }
+
+
 
 @layer base {
   * {
@@ -117,7 +117,9 @@
     font-family: 'DM Sans', sans-serif;
   }
   h1, h2, h3 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -195,7 +197,7 @@
 }
 .card-lift:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px oklch(0.62 0.12 38 / 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 /* Button press */
@@ -226,3 +228,10 @@ button:active:not(:disabled) {
   .print-area { position: absolute; left: 0; top: 0; width: 100%; max-width: none !important; max-height: none !important; overflow: visible !important; border-radius: 0 !important; }
   .no-print { display: none !important; }
 }
+
+/* Charts on the dark system */
+.recharts-default-tooltip { background: var(--card-bg) !important; border: 1px solid var(--line) !important; border-radius: 12px !important; color: var(--ink) !important; }
+.recharts-tooltip-label { color: var(--txt-muted) !important; }
+.recharts-cartesian-axis-tick-value { fill: var(--txt-muted); }
+input, textarea, select { color: var(--ink); }
+input::placeholder, textarea::placeholder { color: var(--txt-muted); }

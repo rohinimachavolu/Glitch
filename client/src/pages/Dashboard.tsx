@@ -16,10 +16,10 @@ import NudgeStrip from "@/components/NudgeStrip";
 import { PhaseBanner, celebrate } from "@/components/Fun";
 
 const MACRO_COLORS = {
-  cal:     "var(--accent)",
+  cal: "var(--accent)",
   protein: "oklch(0.72 0.08 148)",
-  carbs:   "oklch(0.78 0.10 75)",
-  fats:    "oklch(0.68 0.09 25)",
+  carbs: "oklch(0.78 0.10 75)",
+  fats: "oklch(0.68 0.09 25)",
 };
 
 export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string) => void }) {
@@ -93,10 +93,10 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
           <Loader2 size={32} style={{ color: "var(--accent)", animation: "spin 1s linear infinite" }} />
         </div>
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: "oklch(0.25 0.025 50)" }}>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 700, color: "var(--ink)" }}>
             Personalizing your plan…
           </p>
-          <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", marginTop: 6, fontFamily: "'DM Sans', sans-serif" }}>
+          <p style={{ fontSize: 13, color: "var(--txt-muted)", marginTop: 6, fontFamily: "'DM Sans', sans-serif" }}>
             Our AI is calculating your nutrition targets and exercise plan based on your profile.
           </p>
         </div>
@@ -108,7 +108,7 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
   if (!nutritionGoals) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 px-6" style={{ minHeight: "60vh" }}>
-        <p style={{ fontSize: 14, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif", textAlign: "center" }}>
+        <p style={{ fontSize: 14, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif", textAlign: "center" }}>
           Could not load your nutrition plan. Please check your connection and try again.
         </p>
       </div>
@@ -141,8 +141,8 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
         <div style={{ position: "relative", zIndex: 1 }}>
           <div className="flex items-center justify-between">
             <div>
-              <p style={{ fontSize: 13, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>{today}</p>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "oklch(0.25 0.025 50)", marginTop: 2 }}>
+              <p style={{ fontSize: 13, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>{today}</p>
+              <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
                 {greeting}, {profile?.name ?? "there"} 👋
               </h1>
             </div>
@@ -163,7 +163,7 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
               className="mt-3 px-3 py-2 rounded-xl animate-fade-up"
               style={{ background: "oklch(0.72 0.08 148 / 0.15)", border: "1px solid oklch(0.72 0.08 148 / 0.3)" }}
             >
-              <p style={{ fontSize: 12, color: "oklch(0.40 0.06 148)", fontFamily: "'DM Sans', sans-serif" }}>
+              <p style={{ fontSize: 12, color: "oklch(0.84 0.08 148)", fontFamily: "'DM Sans', sans-serif" }}>
                 🌿 {motivMsg ?? nutritionGoals.rationale}
               </p>
             </div>
@@ -181,13 +181,13 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
         <div
           className="animate-fade-up animate-fade-up-delay-1"
           style={{
-            background: "oklch(0.99 0.010 78)",
+            background: "var(--card-bg)",
             borderRadius: 22,
             padding: "18px 16px",
             boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
           }}
         >
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 14 }}>
+          <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "var(--ink)", marginBottom: 14 }}>
             Today's Macros
           </h2>
           <div className="flex justify-around">
@@ -202,13 +202,13 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
         <div
           className="animate-fade-up animate-fade-up-delay-2"
           style={{
-            background: "oklch(0.99 0.010 78)",
+            background: "var(--card-bg)",
             borderRadius: 22,
             padding: "18px 16px",
             boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
           }}
         >
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)", marginBottom: 14 }}>
+          <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "var(--ink)", marginBottom: 14 }}>
             Micronutrients
           </h2>
           <div className="flex flex-col gap-3">
@@ -225,21 +225,21 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
         <div
           className="animate-fade-up animate-fade-up-delay-3"
           style={{
-            background: "oklch(0.99 0.010 78)",
+            background: "var(--card-bg)",
             borderRadius: 22,
             padding: "18px 16px",
             boxShadow: "0 4px 16px oklch(0.25 0.025 50 / 0.06)",
           }}
         >
           <div className="flex justify-between items-center mb-3">
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: "oklch(0.35 0.025 50)" }}>
+            <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "var(--ink)" }}>
               Steps Today
             </h2>
             <span style={{ fontSize: 20, fontWeight: 700, color: "var(--accent)", fontFamily: "'DM Sans', sans-serif" }}>
               {steps.toLocaleString()}
             </span>
           </div>
-          <div style={{ height: 10, borderRadius: 999, background: "oklch(0.88 0.020 72)", overflow: "hidden" }}>
+          <div style={{ height: 10, borderRadius: 999, background: "var(--surface-2)", overflow: "hidden" }}>
             <div
               style={{
                 height: "100%",
@@ -250,7 +250,7 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
               }}
             />
           </div>
-          <p style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", marginTop: 6, fontFamily: "'DM Sans', sans-serif" }}>
+          <p style={{ fontSize: 11, color: "var(--txt-muted)", marginTop: 6, fontFamily: "'DM Sans', sans-serif" }}>
             Goal: {dynamicStepGoal.toLocaleString()} steps
             {totals.cal > nutritionGoals.calorieTarget ? " (adjusted for extra calories)" : ""}
           </p>
@@ -263,7 +263,7 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
 
         {/* Meals Today */}
         <div className="animate-fade-up animate-fade-up-delay-4">
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700, color: "oklch(0.25 0.025 50)", marginBottom: 12 }}>
+          <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 700, color: "var(--ink)", marginBottom: 12 }}>
             Meals Today
           </h2>
           {meals.length === 0 ? (
@@ -271,13 +271,13 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
               style={{
                 padding: "24px 16px",
                 borderRadius: 18,
-                background: "oklch(0.99 0.010 78)",
+                background: "var(--card-bg)",
                 textAlign: "center",
-                border: "1.5px dashed oklch(0.88 0.020 72)",
+                border: "1.5px dashed var(--line)",
               }}
             >
               <p style={{ fontSize: 32, marginBottom: 8 }}>🍽️</p>
-              <p style={{ fontSize: 14, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
+              <p style={{ fontSize: 14, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>
                 No meals logged yet today. Tap <b>Log Food</b> to get started!
               </p>
             </div>
@@ -290,7 +290,7 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
                   style={{
                     display: "flex",
                     gap: 12,
-                    background: "oklch(0.99 0.010 78)",
+                    background: "var(--card-bg)",
                     borderRadius: 18,
                     padding: "12px 14px",
                     boxShadow: "0 2px 10px oklch(0.25 0.025 50 / 0.06)",
@@ -306,7 +306,7 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
                   )}
                   <div className="flex flex-col justify-center flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span style={{ fontSize: 14, fontWeight: 600, color: "oklch(0.25 0.025 50)", fontFamily: "'DM Sans', sans-serif" }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", fontFamily: "'DM Sans', sans-serif" }}>
                         {meal.name}
                       </span>
                       <span
@@ -316,7 +316,7 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
                           padding: "2px 8px",
                           borderRadius: 999,
                           background: "color-mix(in oklch, var(--accent) 12%, transparent)",
-                          color: "oklch(0.50 0.10 38)",
+                          color: "oklch(0.84 0.12 38)",
                           fontFamily: "'DM Sans', sans-serif",
                         }}
                       >
@@ -330,12 +330,12 @@ export default function Dashboard({ onAskCoach }: { onAskCoach?: (prompt: string
                         { label: "C",   val: meal.carbs,    unit: "g" },
                         { label: "F",   val: meal.fats,     unit: "g" },
                       ].map(({ label, val, unit }) => (
-                        <span key={label} style={{ fontSize: 11, color: "oklch(0.55 0.020 60)", fontFamily: "'DM Sans', sans-serif" }}>
-                          <b style={{ color: "oklch(0.35 0.025 50)" }}>{val}</b>{unit} {label}
+                        <span key={label} style={{ fontSize: 11, color: "var(--txt-muted)", fontFamily: "'DM Sans', sans-serif" }}>
+                          <b style={{ color: "var(--ink)" }}>{val}</b>{unit} {label}
                         </span>
                       ))}
                     </div>
-                    <span style={{ fontSize: 10, color: "oklch(0.65 0.015 60)", marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
+                    <span style={{ fontSize: 10, color: "var(--txt-muted)", marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
                       {meal.time}
                     </span>
                   </div>
